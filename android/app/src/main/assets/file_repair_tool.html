@@ -1,0 +1,1121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Universal File Repair Tool v3.0</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+    <style>
+        :root { --bg: #121212; --panel: #1f1f1f; --text: #e0e0e0; --accent: #00e5ff; --ok: #76ff03; --del: #ff1744; --btn-bg: #333; --word: #2b579a; --excel: #217346; --ppt: #d24726; --zip: #f0a030; --pdf: #e44d26; }
+        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+        .main { width: 100%; max-width: 1000px; }
+        .card { background: var(--panel); border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
+        h1 { margin-top: 0; color: var(--accent); }
+        p { color: #aaa; line-height: 1.5; }
+        button { background: var(--accent); color: #000; border: none; padding: 12px 24px; font-weight: bold; border-radius: 4px; cursor: pointer; transition: transform 0.1s; }
+        button:active { transform: scale(0.98); }
+        button:disabled { opacity: 0.5; cursor: not-allowed; background: #555; }
+        #log { height: 450px; overflow-y: auto; background: #000; border: 1px solid #333; padding: 10px; font-size: 12px; white-space: pre-wrap; font-family: 'Consolas', monospace; color: #ccc; }
+        .ok { color: var(--ok); } .del { color: var(--del); } .warn { color: #ffd740; } .info { color: var(--accent); }
+
+        .format-badges { display: flex; gap: 10px; margin: 15px 0; flex-wrap: wrap; }
+        .badge { padding: 8px 16px; border-radius: 20px; font-size: 0.85em; font-weight: bold; }
+        .badge-word { background: var(--word); color: #fff; }
+        .badge-excel { background: var(--excel); color: #fff; }
+        .badge-ppt { background: var(--ppt); color: #fff; }
+        .badge-zip { background: var(--zip); color: #000; }
+        .badge-pdf { background: var(--pdf); color: #fff; }
+
+        .modal-overlay { position: fixed; top:0; left:0; width:100%; height:100%; background: rgba(0,0,0,0.85); display: none; align-items: center; justify-content: center; z-index: 1000; }
+        .modal { background: #222; padding: 30px; border-radius: 12px; border: 1px solid #444; max-width: 700px; width: 90%; box-shadow: 0 20px 50px rgba(0,0,0,0.7); max-height: 90vh; overflow-y: auto; }
+        .modal h2 { color: var(--accent); margin-top: 0; border-bottom: 1px solid #444; padding-bottom: 10px; }
+        .strategy-btn { display: block; width: 100%; text-align: left; padding: 15px; margin: 10px 0; background: var(--btn-bg); border: 1px solid #444; color: #fff; cursor: pointer; border-radius: 6px; transition: 0.2s; }
+        .strategy-btn:hover { background: #444; border-color: var(--accent); }
+        .strategy-btn strong { display: block; font-size: 1.1em; margin-bottom: 4px; color: var(--accent); }
+        .strategy-btn span { font-size: 0.9em; color: #aaa; }
+        .file-info { background: #111; padding: 12px; margin-bottom: 20px; border-radius: 6px; border: 1px solid #333; font-family: 'Consolas', monospace; color: var(--ok); max-height: 150px; overflow-y: auto; }
+
+        .detected-type { padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 1.1em; }
+        .detected-word { background: rgba(43,87,154,0.3); border: 1px solid var(--word); }
+        .detected-excel { background: rgba(33,115,70,0.3); border: 1px solid var(--excel); }
+        .detected-ppt { background: rgba(210,71,38,0.3); border: 1px solid var(--ppt); }
+        .detected-zip { background: rgba(240,160,48,0.3); border: 1px solid var(--zip); }
+        .detected-pdf { background: rgba(228,77,38,0.3); border: 1px solid var(--pdf); }
+        .detected-unknown { background: rgba(255,255,255,0.1); border: 1px solid #666; }
+
+        #detectedType { display: none; }
+        
+        .section-title { color: var(--accent); font-size: 0.9em; margin: 20px 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
+    </style>
+</head>
+<body>
+
+<div class="main">
+    <div class="card">
+        <h1>🔧 Universal File Repair Tool v3.0</h1>
+        <p>Repairs corrupted files using advanced structure recovery, fault-tolerant DEFLATE decompression, XML healing, and PDF object reconstruction.</p>
+        
+        <div class="section-title">Office Documents</div>
+        <div class="format-badges">
+            <span class="badge badge-word">📄 DOCX</span>
+            <span class="badge badge-excel">📊 XLSX</span>
+            <span class="badge badge-ppt">📽️ PPTX</span>
+        </div>
+        
+        <div class="section-title">Archives & Documents</div>
+        <div class="format-badges">
+            <span class="badge badge-zip">📦 ZIP</span>
+            <span class="badge badge-pdf">📕 PDF</span>
+        </div>
+
+        <input type="file" id="fileInput" accept=".docx,.xlsx,.pptx,.zip,.pdf,.doc,.xls,.ppt" />
+        
+        <div id="detectedType" class="detected-type"></div>
+
+        <div style="margin-top:20px">
+            <button id="btnRun" disabled>Run Repair</button>
+            <button id="btnDownload" style="display:none; background: var(--ok); color: #000;">Download Result</button>
+        </div>
+    </div>
+    <div id="log">Ready. Load a file to begin repair...</div>
+</div>
+
+<!-- STRATEGY MODAL -->
+<div id="modal" class="modal-overlay">
+    <div class="modal">
+        <h2>⚠️ Recovery Options</h2>
+        <p id="modalDesc">Please choose a recovery strategy:</p>
+        <div id="fileInfo" class="file-info"></div>
+        <div id="strategyButtons"></div>
+    </div>
+</div>
+
+<script>
+// ============================================================================
+// ANDROID BRIDGE FUNCTIONS
+// ============================================================================
+function isAndroid() {
+    return typeof Android !== 'undefined';
+}
+
+function loadFileFromAndroid(fileName, base64Data) {
+    try {
+        // Decode base64 to ArrayBuffer
+        const binaryString = atob(base64Data);
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.charCodeAt(i);
+        }
+        
+        // Store in global state
+        fileBuf = bytes.buffer;
+        window.fileName = fileName;
+        
+        // Update UI
+        document.getElementById('btnRun').disabled = false;
+        document.getElementById('btnDownload').style.display = 'none';
+        log(`Loaded ${fileName} (${(fileBuf.byteLength/1024).toFixed(2)} KB)`);
+        
+        const u8 = new Uint8Array(fileBuf);
+        const detected = detectFormat(u8, fileName);
+        const typeEl = document.getElementById('detectedType');
+        
+        if (detected) {
+            const info = getFormatInfo(detected);
+            typeEl.innerHTML = `${info.icon} Detected: <strong>${info.name}</strong>`;
+            typeEl.className = `detected-type detected-${info.color}`;
+        } else {
+            typeEl.innerHTML = `📁 Format will be auto-detected during scan`;
+            typeEl.className = `detected-type detected-unknown`;
+        }
+        typeEl.style.display = 'block';
+        
+        if (isAndroid()) {
+            Android.showToast('File loaded: ' + fileName);
+        }
+    } catch (e) {
+        log('Error loading file: ' + e.message, 'del');
+        if (isAndroid()) {
+            Android.showToast('Error loading file');
+        }
+    }
+}
+
+function saveFileToAndroid(blob, fileName) {
+    const reader = new FileReader();
+    reader.onload = function() {
+        const base64Data = reader.result.split(',')[1];
+        if (isAndroid()) {
+            Android.saveFile(fileName, base64Data);
+        }
+    };
+    reader.readAsDataURL(blob);
+}
+
+function shareFileFromAndroid(blob, fileName) {
+    const reader = new FileReader();
+    reader.onload = function() {
+        const base64Data = reader.result.split(',')[1];
+        if (isAndroid()) {
+            Android.shareFile(fileName, base64Data);
+        }
+    };
+    reader.readAsDataURL(blob);
+}
+
+// ============================================================================
+// DUMMY ASSETS FOR OFFICE FORMATS
+// ============================================================================
+const DUMMY = {
+    DOCX: {
+        TYPES: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/></Types>`,
+        RELS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="word/document.xml"/></Relationships>`,
+        DOC_RELS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"></Relationships>`
+    },
+    XLSX: {
+        TYPES: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/worksheets/sheet1.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/><Override PartName="/xl/sharedStrings.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sharedStrings+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/></Types>`,
+        RELS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="xl/workbook.xml"/></Relationships>`,
+        WORKBOOK: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><workbook xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships"><sheets><sheet name="Sheet1" sheetId="1" r:id="rId1"/></sheets></workbook>`,
+        WORKBOOK_RELS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/sharedStrings" Target="sharedStrings.xml"/><Relationship Id="rId3" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/></Relationships>`,
+        STYLES: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts><fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills><borders count="1"><border/></borders><cellStyleXfs count="1"><xf/></cellStyleXfs><cellXfs count="1"><xf/></cellXfs></styleSheet>`,
+        SHARED_STRINGS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><sst xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" count="0" uniqueCount="0"></sst>`
+    },
+    PPTX: {
+        TYPES: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Default Extension="jpeg" ContentType="image/jpeg"/><Default Extension="png" ContentType="image/png"/><Override PartName="/ppt/presentation.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.presentation.main+xml"/><Override PartName="/ppt/slides/slide1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slide+xml"/><Override PartName="/ppt/slideLayouts/slideLayout1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideLayout+xml"/><Override PartName="/ppt/slideMasters/slideMaster1.xml" ContentType="application/vnd.openxmlformats-officedocument.presentationml.slideMaster+xml"/></Types>`,
+        RELS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument" Target="ppt/presentation.xml"/></Relationships>`,
+        PRESENTATION: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:presentation xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:sldMasterIdLst><p:sldMasterId id="2147483648" r:id="rId1"/></p:sldMasterIdLst><p:sldIdLst><p:sldId id="256" r:id="rId2"/></p:sldIdLst><p:sldSz cx="9144000" cy="6858000" type="screen4x3"/><p:notesSz cx="6858000" cy="9144000"/></p:presentation>`,
+        PRESENTATION_RELS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="slideMasters/slideMaster1.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slide" Target="slides/slide1.xml"/></Relationships>`,
+        SLIDE_MASTER: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sldMaster xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld><p:clrMap bg1="lt1" tx1="dk1" bg2="lt2" tx2="dk2" accent1="accent1" accent2="accent2" accent3="accent3" accent4="accent4" accent5="accent5" accent6="accent6" hlink="hlink" folHlink="folHlink"/><p:sldLayoutIdLst><p:sldLayoutId id="2147483649" r:id="rId1"/></p:sldLayoutIdLst></p:sldMaster>`,
+        SLIDE_MASTER_RELS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideLayout" Target="../slideLayouts/slideLayout1.xml"/></Relationships>`,
+        SLIDE_LAYOUT: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><p:sldLayout xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:p="http://schemas.openxmlformats.org/presentationml/2006/main" type="blank"><p:cSld><p:spTree><p:nvGrpSpPr><p:cNvPr id="1" name=""/><p:cNvGrpSpPr/><p:nvPr/></p:nvGrpSpPr><p:grpSpPr/></p:spTree></p:cSld></p:sldLayout>`,
+        SLIDE_LAYOUT_RELS: `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/slideMaster" Target="../slideMasters/slideMaster1.xml"/></Relationships>`
+    }
+};
+
+// ============================================================================
+// IMMORTAL INFLATER (Fault-Tolerant DEFLATE Decoder)
+// ============================================================================
+const ImmortalInflate = (function() {
+    class BitStream {
+        constructor(u8) { this.buf=u8; this.pos=0; this.bit=0; this.len=u8.length; }
+        read(n) {
+            let v=0;
+            for(let i=0;i<n;i++) {
+                if(this.pos>=this.len) return -1;
+                v |= ((this.buf[this.pos]>>>this.bit)&1)<<i;
+                this.bit++;
+                if(this.bit===8){this.bit=0;this.pos++;}
+            }
+            return v;
+        }
+        align() { if(this.bit!==0){this.bit=0;this.pos++;} }
+    }
+    const FIXED_LIT=new Uint8Array(288); for(let i=0;i<144;i++)FIXED_LIT[i]=8;for(let i=144;i<256;i++)FIXED_LIT[i]=9;for(let i=256;i<280;i++)FIXED_LIT[i]=7;for(let i=280;i<288;i++)FIXED_LIT[i]=8;
+    const FIXED_DIST=new Uint8Array(32); for(let i=0;i<32;i++)FIXED_DIST[i]=5;
+    const CLEN_ORDER=[16,17,18,0,8,7,9,6,10,5,11,4,12,3,13,2,14,1,15];
+    const LEN_BASE=[3,4,5,6,7,8,9,10,11,13,15,17,19,23,27,31,35,43,51,59,67,83,99,115,131,163,195,227,258];
+    const LEN_EXTRA=[0,0,0,0,0,0,0,0,1,1,1,1,2,2,2,2,3,3,3,3,4,4,4,4,5,5,5,5,0];
+    const DIST_BASE=[1,2,3,4,5,7,9,13,17,25,33,49,65,97,129,193,257,385,513,769,1025,1537,2049,3073,4097,6145,8193,12289,16385,24577];
+    const DIST_EXTRA=[0,0,0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7,8,8,9,9,10,10,11,11,12,12,13,13];
+
+    function buildTree(lengths){
+        const counts=new Int32Array(16), nextCode=new Int32Array(16);
+        let maxLen=0;
+        for(let i=0;i<lengths.length;i++){counts[lengths[i]]++; if(lengths[i]>maxLen)maxLen=lengths[i];}
+        if(maxLen===0)return null;
+        let code=0; counts[0]=0;
+        for(let i=1;i<=15;i++){ code=(code+counts[i-1])<<1; nextCode[i]=code; }
+        const map={};
+        for(let i=0;i<lengths.length;i++){
+            let len=lengths[i];
+            if(len!==0){ map[(len<<16)|nextCode[len]]=i; nextCode[len]++; }
+        }
+        return {map,maxLen};
+    }
+    function decodeSym(s,t){
+        let c=0;
+        for(let l=1;l<=t.maxLen;l++){
+            const b=s.read(1); if(b===-1)return -1;
+            c=(c<<1)|b;
+            const k=(l<<16)|c;
+            if(t.map[k]!==undefined)return t.map[k];
+        }
+        return -2;
+    }
+    return function inflate(u8){
+        const s=new BitStream(u8);
+        const out=[];
+        let bfinal=0;
+        let corrupted=false;
+        try{
+            while(!bfinal){
+                bfinal=s.read(1); const btype=s.read(2);
+                if(bfinal===-1||btype===-1) { corrupted=true; break; }
+                if(btype===0){
+                    s.align(); const len=s.read(16); const nlen=s.read(16);
+                    if(len===-1) { corrupted=true; break; }
+                    for(let i=0;i<len;i++) out.push(s.buf[s.pos++]||0);
+                }else if(btype===1||btype===2){
+                    let lt,dt;
+                    if(btype===1){ lt=buildTree(FIXED_LIT); dt=buildTree(FIXED_DIST); }
+                    else{
+                        const hl=s.read(5)+257, hd=s.read(5)+1, hc=s.read(4)+4;
+                        if(hl<257) { corrupted=true; break; }
+                        const cl=new Uint8Array(19);
+                        for(let i=0;i<hc;i++) cl[CLEN_ORDER[i]]=s.read(3);
+                        const ct=buildTree(cl); if(!ct) { corrupted=true; break; }
+                        const unpack=(count)=>{
+                            const r=[];
+                            while(r.length<count){
+                                const sy=decodeSym(s,ct);
+                                if(sy<0||sy>18)return null;
+                                if(sy<16)r.push(sy);
+                                else if(sy===16){ let c=3+s.read(2), p=r[r.length-1]; while(c--)r.push(p); }
+                                else if(sy===17){ let z=3+s.read(3); while(z--)r.push(0); }
+                                else if(sy===18){ let z=11+s.read(7); while(z--)r.push(0); }
+                            }
+                            return new Uint8Array(r);
+                        };
+                        const ll=unpack(hl), dl=unpack(hd);
+                        if(!ll||!dl) { corrupted=true; break; }
+                        lt=buildTree(ll); dt=buildTree(dl);
+                    }
+                    if(!lt||!dt) { corrupted=true; break; }
+                    while(true){
+                        const sym=decodeSym(s,lt);
+                        if(sym===-1||sym===-2) { corrupted=true; break; }
+                        if(sym===256)break;
+                        if(sym<256) out.push(sym);
+                        else{
+                            const lc=sym-257; if(lc>28) { corrupted=true; break; }
+                            const len=LEN_BASE[lc]+s.read(LEN_EXTRA[lc]);
+                            const dc=decodeSym(s,dt); if(dc<0) { corrupted=true; break; }
+                            const dist=DIST_BASE[dc]+s.read(DIST_EXTRA[dc]);
+                            if(dist>out.length){ corrupted=true; bfinal=1; break; } 
+                            let ptr=out.length-dist;
+                            for(let i=0;i<len;i++) out.push(out[ptr++]);
+                        }
+                    }
+                }else { corrupted=true; break; }
+            }
+        }catch(e){ corrupted=true; }
+        return { data: new Uint8Array(out), isCorrupt: corrupted };
+    };
+})();
+
+// ============================================================================
+// PDF REPAIR ENGINE
+// ============================================================================
+const PDFRepair = {
+    // Find all PDF objects in raw bytes
+    findObjects(u8) {
+        const text = new TextDecoder('latin1').decode(u8);
+        const objects = [];
+        const objRegex = /(\d+)\s+(\d+)\s+obj\b/g;
+        let match;
+        
+        while ((match = objRegex.exec(text)) !== null) {
+            const objNum = parseInt(match[1]);
+            const genNum = parseInt(match[2]);
+            const startPos = match.index;
+            
+            // Find endobj
+            const endMatch = text.substring(startPos).match(/endobj/);
+            const endPos = endMatch ? startPos + endMatch.index + 6 : text.length;
+            
+            objects.push({
+                num: objNum,
+                gen: genNum,
+                start: startPos,
+                end: endPos,
+                content: text.substring(startPos, endPos)
+            });
+        }
+        return objects;
+    },
+    
+    // Find streams and try to extract content
+    findStreams(u8) {
+        const text = new TextDecoder('latin1').decode(u8);
+        const streams = [];
+        let pos = 0;
+        
+        while (true) {
+            const streamStart = text.indexOf('stream', pos);
+            if (streamStart === -1) break;
+            
+            // Skip past 'stream' and newline
+            let dataStart = streamStart + 6;
+            if (text[dataStart] === '\r') dataStart++;
+            if (text[dataStart] === '\n') dataStart++;
+            
+            // Find endstream
+            const endStream = text.indexOf('endstream', dataStart);
+            if (endStream === -1) {
+                pos = streamStart + 1;
+                continue;
+            }
+            
+            // Get stream data
+            let dataEnd = endStream;
+            if (text[dataEnd - 1] === '\n') dataEnd--;
+            if (text[dataEnd - 1] === '\r') dataEnd--;
+            
+            const streamData = u8.slice(dataStart, dataEnd);
+            streams.push({
+                start: streamStart,
+                dataStart: dataStart,
+                dataEnd: dataEnd,
+                end: endStream + 9,
+                data: streamData
+            });
+            
+            pos = endStream + 9;
+        }
+        return streams;
+    },
+    
+    // Extract text content from PDF
+    extractText(u8) {
+        const text = new TextDecoder('latin1').decode(u8);
+        const textContent = [];
+        
+        // Find text in parentheses (literal strings)
+        const litRegex = /\(([^)]*)\)/g;
+        let match;
+        while ((match = litRegex.exec(text)) !== null) {
+            const str = match[1].replace(/\\n/g, '\n').replace(/\\r/g, '\r').replace(/\\t/g, '\t');
+            if (str.length > 0 && /[a-zA-Z0-9]/.test(str)) {
+                textContent.push(str);
+            }
+        }
+        
+        // Find text in hex strings
+        const hexRegex = /<([0-9A-Fa-f\s]+)>/g;
+        while ((match = hexRegex.exec(text)) !== null) {
+            const hex = match[1].replace(/\s/g, '');
+            if (hex.length >= 2 && hex.length % 2 === 0) {
+                let str = '';
+                for (let i = 0; i < hex.length; i += 2) {
+                    const code = parseInt(hex.substr(i, 2), 16);
+                    if (code >= 32 && code < 127) str += String.fromCharCode(code);
+                }
+                if (str.length > 0) textContent.push(str);
+            }
+        }
+        
+        return textContent;
+    },
+    
+    // Build a repaired PDF
+    rebuild(u8) {
+        const objects = this.findObjects(u8);
+        const extractedText = this.extractText(u8);
+        
+        log(`Found ${objects.length} PDF objects`, 'info');
+        log(`Extracted ${extractedText.length} text fragments`, 'info');
+        
+        if (objects.length === 0 && extractedText.length === 0) {
+            return null;
+        }
+        
+        // Try to rebuild with found objects
+        let pdf = '%PDF-1.4\n';
+        let xrefEntries = [];
+        let currentOffset = pdf.length;
+        
+        // Sort objects by number
+        objects.sort((a, b) => a.num - b.num);
+        
+        // Add objects
+        for (const obj of objects) {
+            xrefEntries.push({ num: obj.num, offset: currentOffset });
+            pdf += obj.content + '\n';
+            currentOffset = pdf.length;
+        }
+        
+        // If no valid objects found, create a text-only PDF with extracted content
+        if (objects.length === 0 && extractedText.length > 0) {
+            return this.createTextPDF(extractedText.join('\n'));
+        }
+        
+        // Build xref table
+        const xrefOffset = currentOffset;
+        pdf += 'xref\n';
+        pdf += `0 ${Math.max(...xrefEntries.map(e => e.num)) + 1}\n`;
+        pdf += '0000000000 65535 f \n';
+        
+        for (let i = 1; i <= Math.max(...xrefEntries.map(e => e.num)); i++) {
+            const entry = xrefEntries.find(e => e.num === i);
+            if (entry) {
+                pdf += entry.offset.toString().padStart(10, '0') + ' 00000 n \n';
+            } else {
+                pdf += '0000000000 65535 f \n';
+            }
+        }
+        
+        // Trailer
+        const rootObj = objects.find(o => o.content.includes('/Type /Catalog') || o.content.includes('/Type/Catalog'));
+        const rootNum = rootObj ? rootObj.num : 1;
+        
+        pdf += 'trailer\n';
+        pdf += `<< /Size ${Math.max(...xrefEntries.map(e => e.num)) + 1} /Root ${rootNum} 0 R >>\n`;
+        pdf += 'startxref\n';
+        pdf += xrefOffset + '\n';
+        pdf += '%%EOF\n';
+        
+        return new TextEncoder().encode(pdf);
+    },
+    
+    // Create a simple text-only PDF
+    createTextPDF(text) {
+        const escapedText = text.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+        const lines = escapedText.split('\n');
+        let streamContent = 'BT\n/F1 12 Tf\n72 720 Td\n14 TL\n';
+        
+        for (const line of lines.slice(0, 50)) { // Limit lines
+            streamContent += `(${line.substring(0, 80)}) Tj T*\n`;
+        }
+        streamContent += 'ET';
+        
+        const pdf = `%PDF-1.4
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length ${streamContent.length} >>
+stream
+${streamContent}
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 6
+0000000000 65535 f 
+0000000009 00000 n 
+0000000058 00000 n 
+0000000115 00000 n 
+0000000266 00000 n 
+0000000${(317 + streamContent.length).toString().padStart(3, '0')} 00000 n 
+trailer
+<< /Size 6 /Root 1 0 R >>
+startxref
+${380 + streamContent.length}
+%%EOF`;
+        
+        return new TextEncoder().encode(pdf);
+    }
+};
+
+// ============================================================================
+// APP STATE
+// ============================================================================
+const logEl = document.getElementById('log');
+let fileBuf = null;
+window.fileName = '';
+let detectedFormat = null;
+let contentCandidates = [];
+let recoveredAssets = {};
+
+// ============================================================================
+// LOGGING
+// ============================================================================
+function log(msg, cls=''){
+    const d=document.createElement('div');
+    d.textContent=`[${new Date().toLocaleTimeString()}] ${msg}`;
+    if(cls) d.className=cls;
+    logEl.appendChild(d);
+    logEl.scrollTop=logEl.scrollHeight;
+}
+
+// ============================================================================
+// FORMAT DETECTION
+// ============================================================================
+function detectFormat(u8, fName) {
+    const ext = fName.toLowerCase().split('.').pop();
+    
+    // Check by extension first
+    if (['docx','xlsx','pptx'].includes(ext)) {
+        // Verify it's actually a ZIP-based format
+        if (u8[0] === 0x50 && u8[1] === 0x4b) return ext;
+    }
+    if (ext === 'zip') return 'zip';
+    if (ext === 'pdf') return 'pdf';
+    
+    // Check by magic bytes
+    if (u8[0] === 0x50 && u8[1] === 0x4b) {
+        // It's a ZIP - try to determine Office type
+        const text = new TextDecoder('latin1').decode(u8.slice(0, Math.min(u8.length, 2000)));
+        if (text.includes('word/')) return 'docx';
+        if (text.includes('xl/')) return 'xlsx';
+        if (text.includes('ppt/')) return 'pptx';
+        return 'zip';
+    }
+    
+    // Check for PDF
+    const header = new TextDecoder('latin1').decode(u8.slice(0, 8));
+    if (header.includes('%PDF')) return 'pdf';
+    
+    // Scan for PDF marker anywhere in first 1KB
+    const scanText = new TextDecoder('latin1').decode(u8.slice(0, 1024));
+    if (scanText.includes('%PDF')) return 'pdf';
+    
+    return null;
+}
+
+function getFormatInfo(format) {
+    const info = {
+        docx: { name: 'Word Document', icon: '📄', mainPath: 'word/document.xml', color: 'word', ext: 'docx' },
+        xlsx: { name: 'Excel Workbook', icon: '📊', mainPath: 'xl/worksheets/', color: 'excel', ext: 'xlsx' },
+        pptx: { name: 'PowerPoint Presentation', icon: '📽️', mainPath: 'ppt/slides/', color: 'ppt', ext: 'pptx' },
+        zip: { name: 'ZIP Archive', icon: '📦', mainPath: '', color: 'zip', ext: 'zip' },
+        pdf: { name: 'PDF Document', icon: '📕', mainPath: '', color: 'pdf', ext: 'pdf' }
+    };
+    return info[format] || { name: 'Unknown', icon: '📁', mainPath: '', color: 'unknown', ext: 'bin' };
+}
+
+function isMainContent(name, format) {
+    if (format === 'docx') return name.endsWith('word/document.xml');
+    if (format === 'xlsx') return /xl\/worksheets\/sheet\d*\.xml$/i.test(name);
+    if (format === 'pptx') return /ppt\/slides\/slide\d*\.xml$/i.test(name);
+    return false;
+}
+
+// ============================================================================
+// FILE LOADING
+// ============================================================================
+document.getElementById('fileInput').addEventListener('change', e => {
+    const f = e.target.files[0];
+    if (!f) return;
+    window.fileName = f.name;
+    const r = new FileReader();
+    r.onload = ev => { 
+        fileBuf = ev.target.result; 
+        document.getElementById('btnRun').disabled = false; 
+        document.getElementById('btnDownload').style.display = 'none';
+        log(`Loaded ${f.name} (${(fileBuf.byteLength/1024).toFixed(2)} KB)`);
+        
+        const u8 = new Uint8Array(fileBuf);
+        const detected = detectFormat(u8, f.name);
+        const typeEl = document.getElementById('detectedType');
+        
+        if (detected) {
+            const info = getFormatInfo(detected);
+            typeEl.innerHTML = `${info.icon} Detected: <strong>${info.name}</strong>`;
+            typeEl.className = `detected-type detected-${info.color}`;
+        } else {
+            typeEl.innerHTML = `📁 Format will be auto-detected during scan`;
+            typeEl.className = `detected-type detected-unknown`;
+        }
+        typeEl.style.display = 'block';
+    };
+    r.readAsArrayBuffer(f);
+});
+
+// ============================================================================
+// MAIN REPAIR LOGIC
+// ============================================================================
+document.getElementById('btnRun').addEventListener('click', async () => {
+    log("Starting Universal Repair Engine...", 'warn');
+    document.getElementById('btnRun').disabled = true;
+    document.getElementById('btnDownload').style.display = 'none';
+    
+    contentCandidates = [];
+    recoveredAssets = {};
+    
+    const u8 = new Uint8Array(fileBuf);
+    detectedFormat = detectFormat(u8, window.fileName);
+    
+    if (!detectedFormat) {
+        log("CRITICAL: Could not detect file format.", 'del');
+        document.getElementById('btnRun').disabled = false;
+        return;
+    }
+    
+    const fmtInfo = getFormatInfo(detectedFormat);
+    log(`Detected format: ${fmtInfo.icon} ${fmtInfo.name}`, 'ok');
+    
+    // Update UI
+    const typeEl = document.getElementById('detectedType');
+    typeEl.innerHTML = `${fmtInfo.icon} Confirmed: <strong>${fmtInfo.name}</strong>`;
+    typeEl.className = `detected-type detected-${fmtInfo.color}`;
+    
+    let finalBlobs = [];
+    
+    // Route to appropriate repair engine
+    if (detectedFormat === 'pdf') {
+        finalBlobs = await repairPDF(u8);
+    } else if (detectedFormat === 'zip') {
+        finalBlobs = await repairZIP(u8);
+    } else {
+        finalBlobs = await repairOffice(u8, detectedFormat);
+    }
+    
+    if (finalBlobs.length === 0) {
+        log("CRITICAL: No recoverable content found.", 'del');
+        document.getElementById('btnRun').disabled = false;
+        return;
+    }
+    
+    setupDownload(finalBlobs, `repaired_bundle.zip`);
+    log("Process Complete! 🎉", 'ok');
+});
+
+// ============================================================================
+// PDF REPAIR
+// ============================================================================
+async function repairPDF(u8) {
+    log("Phase 1: Analyzing PDF structure...", 'warn');
+    
+    const objects = PDFRepair.findObjects(u8);
+    const streams = PDFRepair.findStreams(u8);
+    const text = PDFRepair.extractText(u8);
+    
+    log(`Found ${objects.length} PDF objects`, objects.length > 0 ? 'ok' : 'del');
+    log(`Found ${streams.length} streams`, streams.length > 0 ? 'ok' : 'warn');
+    log(`Extracted ${text.length} text fragments`, text.length > 0 ? 'ok' : 'warn');
+    
+    log("Phase 2: Rebuilding PDF...", 'warn');
+    
+    let repairedData = PDFRepair.rebuild(u8);
+    
+    if (!repairedData) {
+        // Last resort: try to create text-only PDF
+        if (text.length > 0) {
+            log("Creating text-only recovery PDF...", 'warn');
+            repairedData = PDFRepair.createTextPDF(text.join('\n'));
+        } else {
+            log("No recoverable content found in PDF.", 'del');
+            return [];
+        }
+    }
+    
+    log(`Rebuilt PDF: ${(repairedData.length/1024).toFixed(2)} KB`, 'ok');
+    
+    const blob = new Blob([repairedData], { type: 'application/pdf' });
+    return [{ name: 'repaired.pdf', blob }];
+}
+
+// ============================================================================
+// ZIP REPAIR
+// ============================================================================
+async function repairZIP(u8) {
+    log("Phase 1: Scanning ZIP structure...", 'warn');
+    
+    const view = new DataView(u8.buffer);
+    let offset = 0;
+    const recoveredFiles = {};
+    
+    while (offset < u8.length - 30) {
+        // Look for local file header signature
+        if (u8[offset] !== 0x50 || u8[offset+1] !== 0x4b || u8[offset+2] !== 0x03 || u8[offset+3] !== 0x04) {
+            offset++;
+            continue;
+        }
+        
+        try {
+            const meth = view.getUint16(offset + 8, true);
+            const compSize = view.getUint32(offset + 18, true);
+            const uncompSize = view.getUint32(offset + 22, true);
+            const nl = view.getUint16(offset + 26, true);
+            const el = view.getUint16(offset + 28, true);
+            
+            if (nl === 0 || nl > 512) {
+                offset++;
+                continue;
+            }
+            
+            const name = new TextDecoder().decode(u8.subarray(offset + 30, offset + 30 + nl));
+            
+            // Skip directories
+            if (name.endsWith('/')) {
+                offset += 30 + nl + el;
+                continue;
+            }
+            
+            const dStart = offset + 30 + nl + el;
+            
+            // Find next signature
+            let next = u8.length;
+            for (let k = dStart; k < u8.length - 4; k++) {
+                if (u8[k] === 0x50 && u8[k+1] === 0x4b && (u8[k+2] === 0x01 || u8[k+2] === 0x03 || u8[k+2] === 0x05)) {
+                    next = k;
+                    break;
+                }
+            }
+            
+            const rawChunk = u8.subarray(dStart, next);
+            let finalData = null;
+            
+            if (meth === 0) {
+                // Stored
+                finalData = rawChunk.slice(0, uncompSize || rawChunk.length);
+            } else if (meth === 8) {
+                // Deflated - try multiple offsets
+                let bestRes = { data: new Uint8Array(0), isCorrupt: true };
+                let bestScore = 0;
+                
+                for (let shift = 0; shift < 48; shift++) {
+                    if (shift >= rawChunk.length) break;
+                    const attemptRaw = rawChunk.subarray(shift);
+                    const res = ImmortalInflate(attemptRaw);
+                    if (res.data.length > 0) {
+                        const score = res.data.length + (res.isCorrupt ? 0 : 1000);
+                        if (score > bestScore) {
+                            bestScore = score;
+                            bestRes = res;
+                            if (score > 1000) break;
+                        }
+                    }
+                }
+                finalData = bestRes.data;
+            }
+            
+            if (finalData && finalData.length > 0) {
+                recoveredFiles[name] = finalData;
+                log(`Recovered: ${name} (${finalData.length} bytes)`, 'ok');
+            }
+            
+            offset = next;
+        } catch (e) {
+            offset++;
+        }
+    }
+    
+    const fileCount = Object.keys(recoveredFiles).length;
+    log(`Phase 2: Recovered ${fileCount} files`, fileCount > 0 ? 'ok' : 'del');
+    
+    if (fileCount === 0) {
+        return [];
+    }
+    
+    // Rebuild ZIP
+    log("Phase 3: Rebuilding ZIP archive...", 'warn');
+    const zip = new JSZip();
+    
+    for (const [name, data] of Object.entries(recoveredFiles)) {
+        zip.file(name, data);
+    }
+    
+    const blob = await zip.generateAsync({ type: "blob" });
+    log(`Rebuilt ZIP: ${(blob.size/1024).toFixed(2)} KB`, 'ok');
+    
+    return [{ name: 'repaired.zip', blob }];
+}
+
+// ============================================================================
+// OFFICE REPAIR (DOCX/XLSX/PPTX)
+// ============================================================================
+async function repairOffice(u8, format) {
+    log("Phase 1: Scanning ZIP structure...", 'warn');
+    
+    const view = new DataView(u8.buffer);
+    let offset = 0;
+    const allRecovered = {};
+    
+    while (offset < u8.length - 30) {
+        if (u8[offset] !== 0x50 || u8[offset+1] !== 0x4b || u8[offset+2] !== 0x03 || u8[offset+3] !== 0x04) {
+            offset++;
+            continue;
+        }
+        
+        try {
+            const meth = view.getUint16(offset + 8, true);
+            const nl = view.getUint16(offset + 26, true);
+            const el = view.getUint16(offset + 28, true);
+            
+            if (nl === 0 || nl > 512) { offset++; continue; }
+            
+            const name = new TextDecoder().decode(u8.subarray(offset + 30, offset + 30 + nl));
+            const dStart = offset + 30 + nl + el;
+            
+            let next = u8.length;
+            for (let k = dStart; k < u8.length - 4; k++) {
+                if (u8[k] === 0x50 && u8[k+1] === 0x4b && (u8[k+2] === 0x01 || u8[k+2] === 0x03 || u8[k+2] === 0x05)) {
+                    next = k;
+                    break;
+                }
+            }
+            
+            const rawChunk = u8.subarray(dStart, next);
+            let finalData = null;
+            let isCorrupt = false;
+            
+            if (meth === 0) {
+                finalData = rawChunk;
+            } else if (meth === 8) {
+                let bestRes = { data: new Uint8Array(0), isCorrupt: true };
+                let bestScore = 0;
+                for (let shift = 0; shift < 48; shift++) {
+                    if (shift >= rawChunk.length) break;
+                    const res = ImmortalInflate(rawChunk.subarray(shift));
+                    if (res.data.length > 0) {
+                        const score = rateQuality(res.data, name);
+                        if (score > bestScore) { bestScore = score; bestRes = res; if (score > 1000) break; }
+                    }
+                }
+                finalData = bestRes.data;
+                isCorrupt = bestRes.isCorrupt;
+            }
+            
+            if (finalData && finalData.length > 0) {
+                if (name.endsWith('.xml') || name.endsWith('.rels')) {
+                    let s = new TextDecoder().decode(finalData);
+                    s = healXMLStrict(s);
+                    finalData = new TextEncoder().encode(s);
+                }
+                allRecovered[name] = { data: finalData, isCorrupt };
+                log(`Recovered: ${name} (${finalData.length} bytes)${isCorrupt ? ' [partial]' : ''}`, isCorrupt ? 'warn' : 'ok');
+            }
+            
+            offset = next;
+        } catch (e) {
+            offset++;
+        }
+    }
+    
+    log("Phase 2: Classifying content...", 'warn');
+    
+    for (const [name, { data, isCorrupt }] of Object.entries(allRecovered)) {
+        if (isMainContent(name, format)) {
+            contentCandidates.push({ name, data });
+        } else {
+            const isEssential = name.includes('.rels') || name.includes('[Content_Types]') || 
+                               name.includes('styles') || name.includes('theme') ||
+                               name.includes('sharedStrings') || name.includes('media/');
+            if (!isCorrupt || isEssential) {
+                recoveredAssets[name] = data;
+            }
+        }
+    }
+    
+    log(`Found ${contentCandidates.length} main content files`, contentCandidates.length > 0 ? 'ok' : 'del');
+    
+    if (contentCandidates.length === 0) {
+        return [];
+    }
+    
+    log("Phase 3: Rebuilding document...", 'warn');
+    
+    const fmtInfo = getFormatInfo(format);
+    const blob = await buildOfficeFile(format, contentCandidates, recoveredAssets, false);
+    
+    return [{ name: `repaired.${fmtInfo.ext}`, blob }];
+}
+
+// ============================================================================
+// OFFICE FILE BUILDERS
+// ============================================================================
+async function buildOfficeFile(format, mainContents, assets, useDummy) {
+    const zip = new JSZip();
+    
+    if (format === 'docx') {
+        if (useDummy || !assets || Object.keys(assets).length === 0) {
+            zip.file("[Content_Types].xml", DUMMY.DOCX.TYPES);
+            zip.file("_rels/.rels", DUMMY.DOCX.RELS);
+            zip.file("word/_rels/document.xml.rels", DUMMY.DOCX.DOC_RELS);
+        } else {
+            for (const [n, d] of Object.entries(assets)) zip.file(n, d);
+        }
+        if (mainContents[0]) zip.file("word/document.xml", mainContents[0].data);
+        return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.wordprocessingml.document" });
+    }
+    
+    if (format === 'xlsx') {
+        if (useDummy || !assets || Object.keys(assets).length === 0) {
+            zip.file("[Content_Types].xml", DUMMY.XLSX.TYPES);
+            zip.file("_rels/.rels", DUMMY.XLSX.RELS);
+            zip.file("xl/workbook.xml", DUMMY.XLSX.WORKBOOK);
+            zip.file("xl/_rels/workbook.xml.rels", DUMMY.XLSX.WORKBOOK_RELS);
+            zip.file("xl/styles.xml", DUMMY.XLSX.STYLES);
+            zip.file("xl/sharedStrings.xml", DUMMY.XLSX.SHARED_STRINGS);
+        } else {
+            for (const [n, d] of Object.entries(assets)) zip.file(n, d);
+        }
+        mainContents.forEach((sheet, i) => {
+            zip.file(sheet.name || `xl/worksheets/sheet${i+1}.xml`, sheet.data);
+        });
+        return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+    }
+    
+    if (format === 'pptx') {
+        if (useDummy || !assets || Object.keys(assets).length === 0) {
+            zip.file("[Content_Types].xml", DUMMY.PPTX.TYPES);
+            zip.file("_rels/.rels", DUMMY.PPTX.RELS);
+            zip.file("ppt/presentation.xml", DUMMY.PPTX.PRESENTATION);
+            zip.file("ppt/_rels/presentation.xml.rels", DUMMY.PPTX.PRESENTATION_RELS);
+            zip.file("ppt/slideMasters/slideMaster1.xml", DUMMY.PPTX.SLIDE_MASTER);
+            zip.file("ppt/slideMasters/_rels/slideMaster1.xml.rels", DUMMY.PPTX.SLIDE_MASTER_RELS);
+            zip.file("ppt/slideLayouts/slideLayout1.xml", DUMMY.PPTX.SLIDE_LAYOUT);
+            zip.file("ppt/slideLayouts/_rels/slideLayout1.xml.rels", DUMMY.PPTX.SLIDE_LAYOUT_RELS);
+        } else {
+            for (const [n, d] of Object.entries(assets)) zip.file(n, d);
+        }
+        mainContents.forEach((slide, i) => {
+            zip.file(slide.name || `ppt/slides/slide${i+1}.xml`, slide.data);
+        });
+        return zip.generateAsync({ type: "blob", mimeType: "application/vnd.openxmlformats-officedocument.presentationml.presentation" });
+    }
+    
+    return new Blob();
+}
+
+// ============================================================================
+// DOWNLOAD SETUP
+// ============================================================================
+let currentRepairedBlob = null;
+let currentRepairedName = null;
+
+function setupDownload(finalBlobs, zipName) {
+    const dlBtn = document.getElementById('btnDownload');
+    let finalUrl;
+    
+    if (finalBlobs.length === 1) {
+        currentRepairedBlob = finalBlobs[0].blob;
+        currentRepairedName = finalBlobs[0].name;
+        
+        if (isAndroid()) {
+            dlBtn.onclick = () => { 
+                saveFileToAndroid(currentRepairedBlob, currentRepairedName);
+            };
+            dlBtn.innerText = `Save ${currentRepairedName.split('.').pop().toUpperCase()}`;
+        } else {
+            finalUrl = URL.createObjectURL(finalBlobs[0].blob);
+            dlBtn.onclick = () => { download(finalUrl, finalBlobs[0].name); };
+            dlBtn.innerText = `Download ${finalBlobs[0].name.split('.').pop().toUpperCase()}`;
+        }
+    } else {
+        (async () => {
+            const bundle = new JSZip();
+            finalBlobs.forEach(f => bundle.file(f.name, f.blob));
+            const bundleBlob = await bundle.generateAsync({ type: "blob" });
+            
+            currentRepairedBlob = bundleBlob;
+            currentRepairedName = zipName;
+            
+            if (isAndroid()) {
+                dlBtn.onclick = () => {
+                    saveFileToAndroid(currentRepairedBlob, currentRepairedName);
+                };
+                dlBtn.innerText = "Save Bundle ZIP";
+            } else {
+                finalUrl = URL.createObjectURL(bundleBlob);
+                dlBtn.onclick = () => { download(finalUrl, zipName); };
+                dlBtn.innerText = "Download Bundle ZIP";
+            }
+        })();
+    }
+    
+    dlBtn.style.display = 'inline-block';
+    
+    // Add share button for Android
+    if (isAndroid()) {
+        let shareBtn = document.getElementById('btnShare');
+        if (!shareBtn) {
+            shareBtn = document.createElement('button');
+            shareBtn.id = 'btnShare';
+            shareBtn.style.background = '#00e5ff';
+            shareBtn.style.marginLeft = '10px';
+            dlBtn.parentNode.appendChild(shareBtn);
+        }
+        shareBtn.innerText = '📤 Share';
+        shareBtn.onclick = () => {
+            if (currentRepairedBlob && currentRepairedName) {
+                shareFileFromAndroid(currentRepairedBlob, currentRepairedName);
+            }
+        };
+        shareBtn.style.display = 'inline-block';
+    }
+    
+    document.getElementById('btnRun').disabled = false;
+}
+
+function download(url, name) {
+    if (isAndroid() && currentRepairedBlob) {
+        saveFileToAndroid(currentRepairedBlob, name);
+    } else {
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        a.click();
+    }
+}
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+function rateQuality(u8, name) {
+    let valid = 0;
+    for (let i = 0; i < Math.min(u8.length, 500); i++) {
+        if ((u8[i] >= 32 && u8[i] <= 126) || u8[i] === 10 || u8[i] === 13) valid++;
+    }
+    if (name.endsWith('.xml')) {
+        let hasBracket = false;
+        for (let i = 0; i < Math.min(u8.length, 100); i++) if (u8[i] === 60) hasBracket = true;
+        if (hasBracket) valid += 500;
+    }
+    return valid;
+}
+
+function healXMLStrict(xml) {
+    xml = xml.replace(/[\x00-\x08\x0B\x0C\x0E-\x1F]/g, '');
+    const validStart = xml.search(/<\?xml|<[a-zA-Z0-9]+:/);
+    if (validStart > -1) xml = xml.substring(validStart);
+    else { const f = xml.indexOf('<'); if (f > -1) xml = xml.substring(f); }
+
+    let output = '';
+    let inTag = false;
+    let inQuote = false;
+    let quoteChar = null;
+    
+    for (let i = 0; i < xml.length; i++) {
+        const c = xml[i];
+        const next = xml[i + 1] || '';
+        if (!inTag) {
+            if (c === '<') {
+                if (/[a-zA-Z0-9_:\/?]/.test(next)) { inTag = true; output += c; }
+                else { output += '&lt;'; }
+            } else if (c === '>') { output += '&gt;'; }
+            else { output += c; }
+        } else {
+            if (inQuote) {
+                if (c === quoteChar) { inQuote = false; quoteChar = null; }
+                output += c;
+            } else {
+                if (c === '"' || c === "'") { inQuote = true; quoteChar = c; output += c; }
+                else if (c === '>') { inTag = false; output += c; }
+                else if (c === '<') { output += '>'; inTag = false; i--; }
+                else { output += c; }
+            }
+        }
+    }
+    
+    if (inQuote) output += quoteChar;
+    if (inTag) output += '>';
+    
+    const stack = [];
+    const re = /<\/?([a-zA-Z0-9_:\-]+)[^>]*(\/?)>/g;
+    let match;
+    while ((match = re.exec(output)) !== null) {
+        const tag = match[1];
+        const full = match[0];
+        const isClose = full.startsWith('</');
+        const isSelf = full.endsWith('/>') || match[2] === '/';
+        if (isClose) { if (stack.length && stack[stack.length - 1] === tag) stack.pop(); }
+        else if (!isSelf && !full.startsWith('<?')) { stack.push(tag); }
+    }
+    while (stack.length) output += `</${stack.pop()}>`;
+    
+    return output;
+}
+</script>
+</body>
+</html>
