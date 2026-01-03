@@ -32,22 +32,11 @@ jobs:
       working-directory: ./android
       run: gradle assembleDebug
         
-    - name: Build Release APK
-      working-directory: ./android
-      run: gradle assembleRelease
-        
     - name: Upload Debug APK
       uses: actions/upload-artifact@v4
       with:
         name: app-debug
         path: android/app/build/outputs/apk/debug/app-debug.apk
-        retention-days: 30
-        
-    - name: Upload Release APK
-      uses: actions/upload-artifact@v4
-      with:
-        name: app-release-unsigned
-        path: android/app/build/outputs/apk/release/app-release-unsigned.apk
         retention-days: 30
 
   release:
@@ -73,21 +62,21 @@ jobs:
       with:
         gradle-version: '8.0'
         
-    - name: Build Release APK
+    - name: Build Debug APK
       working-directory: ./android
-      run: gradle assembleRelease
+      run: gradle assembleDebug
         
     - name: Rename APK with version
       run: |
         VERSION=${GITHUB_REF#refs/tags/}
-        cp android/app/build/outputs/apk/release/app-release-unsigned.apk \
-           android/app/build/outputs/apk/release/FileRepairTool-${VERSION}.apk
+        cp android/app/build/outputs/apk/debug/app-debug.apk \
+           android/app/build/outputs/apk/debug/FileRepairTool-${VERSION}.apk
            
     - name: Create Release
       uses: softprops/action-gh-release@v1
       with:
         files: |
-          android/app/build/outputs/apk/release/FileRepairTool-*.apk
+          android/app/build/outputs/apk/debug/FileRepairTool-*.apk
         generate_release_notes: true
         draft: false
         prerelease: false
