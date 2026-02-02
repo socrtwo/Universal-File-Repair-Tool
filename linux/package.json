@@ -3,7 +3,10 @@
   "version": "5.0.0",
   "description": "Universal File Repair Tool - Repairs corrupted DOCX, XLSX, PPTX, ZIP, PDF, JPG, PNG, and MP3 files",
   "main": "main.js",
-  "author": "socrtwo",
+  "author": {
+    "name": "Paul D Pruitt",
+    "email": "socrtwo@s2services.com"
+  },
   "license": "MIT",
   "repository": {
     "type": "git",
