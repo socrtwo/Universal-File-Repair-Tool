@@ -1,0 +1,61 @@
+{
+  "name": "file-repair-tool",
+  "version": "5.0.0",
+  "description": "Universal File Repair Tool - Repairs corrupted DOCX, XLSX, PPTX, ZIP, PDF, JPG, PNG, and MP3 files",
+  "main": "main.js",
+  "author": "socrtwo",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable",
+    "build:nsis": "electron-builder --win nsis"
+  },
+  "build": {
+    "appId": "com.socrtwo.filerepair",
+    "productName": "File Repair Tool",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "file_repair_tool.html",
+      "icon.ico"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        },
+        {
+          "target": "portable",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    },
+    "fileAssociations": [
+      { "ext": "docx", "name": "Word Document", "role": "Editor" },
+      { "ext": "xlsx", "name": "Excel Workbook", "role": "Editor" },
+      { "ext": "pptx", "name": "PowerPoint Presentation", "role": "Editor" },
+      { "ext": "zip", "name": "ZIP Archive", "role": "Editor" },
+      { "ext": "pdf", "name": "PDF Document", "role": "Editor" },
+      { "ext": "jpg", "name": "JPEG Image", "role": "Editor" },
+      { "ext": "jpeg", "name": "JPEG Image", "role": "Editor" },
+      { "ext": "png", "name": "PNG Image", "role": "Editor" },
+      { "ext": "mp3", "name": "MP3 Audio", "role": "Editor" }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}
