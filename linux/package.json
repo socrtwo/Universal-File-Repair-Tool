@@ -1,0 +1,61 @@
+{
+  "name": "file-repair-tool",
+  "version": "5.0.0",
+  "description": "Universal File Repair Tool - Repairs corrupted DOCX, XLSX, PPTX, ZIP, PDF, JPG, PNG, and MP3 files",
+  "main": "main.js",
+  "author": "socrtwo",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/socrtwo/Universal-File-Repair-Tool.git"
+  },
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --linux",
+    "build:appimage": "electron-builder --linux AppImage",
+    "build:deb": "electron-builder --linux deb"
+  },
+  "build": {
+    "appId": "com.socrtwo.filerepair",
+    "productName": "File Repair Tool",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "file_repair_tool.html",
+      "icon.png"
+    ],
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": ["x64"]
+        },
+        {
+          "target": "deb",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "icon.png",
+      "category": "Utility",
+      "description": "Repairs corrupted DOCX, XLSX, PPTX, ZIP, PDF, JPG, PNG, and MP3 files"
+    },
+    "fileAssociations": [
+      { "ext": "docx", "name": "Word Document", "role": "Editor", "mimeType": "application/vnd.openxmlformats-officedocument.wordprocessingml.document" },
+      { "ext": "xlsx", "name": "Excel Workbook", "role": "Editor", "mimeType": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" },
+      { "ext": "pptx", "name": "PowerPoint Presentation", "role": "Editor", "mimeType": "application/vnd.openxmlformats-officedocument.presentationml.presentation" },
+      { "ext": "zip", "name": "ZIP Archive", "role": "Editor", "mimeType": "application/zip" },
+      { "ext": "pdf", "name": "PDF Document", "role": "Editor", "mimeType": "application/pdf" },
+      { "ext": "jpg", "name": "JPEG Image", "role": "Editor", "mimeType": "image/jpeg" },
+      { "ext": "jpeg", "name": "JPEG Image", "role": "Editor", "mimeType": "image/jpeg" },
+      { "ext": "png", "name": "PNG Image", "role": "Editor", "mimeType": "image/png" },
+      { "ext": "mp3", "name": "MP3 Audio", "role": "Editor", "mimeType": "audio/mpeg" }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

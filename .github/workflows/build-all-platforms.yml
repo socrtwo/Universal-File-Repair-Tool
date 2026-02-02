@@ -1,0 +1,231 @@
+name: Build All Platforms
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  # ─── Android APK ──────────────────────────────────────────────
+  build-android:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+
+    - name: Setup Gradle
+      uses: gradle/actions/setup-gradle@v3
+      with:
+        gradle-version: '8.0'
+
+    - name: Build Debug APK
+      working-directory: ./android
+      run: gradle assembleDebug
+
+    - name: Rename APK
+      run: cp android/app/build/outputs/apk/debug/app-debug.apk FileRepairTool-Android.apk
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: android-apk
+        path: FileRepairTool-Android.apk
+
+  # ─── Windows EXE ──────────────────────────────────────────────
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      working-directory: ./windows
+      run: npm install
+
+    - name: Build Windows App
+      working-directory: ./windows
+      run: npm run build
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Collect artifacts
+      shell: bash
+      run: |
+        mkdir -p collect
+        cp windows/dist/*.exe collect/ 2>/dev/null || true
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-exe
+        path: collect/*.exe
+        if-no-files-found: warn
+
+  # ─── Linux AppImage & Deb ─────────────────────────────────────
+  build-linux:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      working-directory: ./linux
+      run: npm install
+
+    - name: Build Linux App
+      working-directory: ./linux
+      run: npm run build
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Collect artifacts
+      run: |
+        mkdir -p collect
+        cp linux/dist/*.AppImage collect/ 2>/dev/null || true
+        cp linux/dist/*.deb collect/ 2>/dev/null || true
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: linux-packages
+        path: collect/*
+        if-no-files-found: warn
+
+  # ─── macOS DMG ────────────────────────────────────────────────
+  build-macos:
+    runs-on: macos-14
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      working-directory: ./macos
+      run: npm install
+
+    - name: Build macOS App
+      working-directory: ./macos
+      run: npm run build
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    - name: Collect artifacts
+      run: |
+        mkdir -p collect
+        cp macos/dist/*.dmg collect/ 2>/dev/null || true
+        cp macos/dist/*.zip collect/ 2>/dev/null || true
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: macos-dmg
+        path: collect/*
+        if-no-files-found: warn
+
+  # ─── iOS Simulator Build ──────────────────────────────────────
+  build-ios:
+    runs-on: macos-14
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+    - name: Build for iOS Simulator
+      working-directory: ./ios
+      run: |
+        xcodebuild build \
+          -project FileRepairTool.xcodeproj \
+          -scheme FileRepairTool \
+          -sdk iphonesimulator \
+          -destination 'platform=iOS Simulator,name=iPhone 15,OS=17.5' \
+          -configuration Release \
+          -derivedDataPath build \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY=""
+
+    - name: Package .app as ZIP
+      working-directory: ./ios
+      run: |
+        APP_PATH=$(find build -name "FileRepairTool.app" -type d | head -1)
+        if [ -n "$APP_PATH" ]; then
+          cd "$(dirname "$APP_PATH")"
+          zip -r "$GITHUB_WORKSPACE/FileRepairTool-iOS-Simulator.zip" FileRepairTool.app
+        else
+          echo "WARNING: .app not found, listing build dir:"
+          find build -type d -name "*.app" || true
+          find build -type d | head -30
+        fi
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: ios-simulator
+        path: FileRepairTool-iOS-Simulator.zip
+        if-no-files-found: warn
+
+  # ─── Create Release ───────────────────────────────────────────
+  release:
+    needs: [build-android, build-windows, build-linux, build-macos, build-ios]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: List all artifacts
+      run: find artifacts -type f | sort
+
+    - name: Generate tag
+      id: tag
+      run: echo "tag=v5.0.0-build-$(date +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.tag.outputs.tag }}
+        name: "File Repair Tool - All Platforms (Unsigned)"
+        body: |
+          ## Universal File Repair Tool v5.0 - Multi-Platform Release
+
+          **All builds are unsigned.** Users may need to approve security prompts on first launch.
+
+          ### Downloads
+          | Platform | File | Notes |
+          |----------|------|-------|
+          | 🤖 Android | `FileRepairTool-Android.apk` | Enable "Install from unknown sources" |
+          | 🪟 Windows | `.exe` installer + portable | Click "More info" → "Run anyway" on SmartScreen |
+          | 🐧 Linux | `.AppImage` + `.deb` | `chmod +x` the AppImage to run |
+          | 🍎 macOS | `.dmg` | Right-click → Open to bypass Gatekeeper |
+          | 📱 iOS | Simulator `.zip` | For simulator testing only (no signing) |
+
+          ### Supported Formats
+          DOCX, XLSX, PPTX, ZIP, PDF, JPG, PNG, MP3
+        files: |
+          artifacts/**/*
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
