@@ -186,7 +186,7 @@ jobs:
   # ─── Create Release ───────────────────────────────────────────
   release:
     needs: [build-android, build-windows, build-linux, build-macos, build-ios]
-    if: always() && !cancelled()
+    if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v4
