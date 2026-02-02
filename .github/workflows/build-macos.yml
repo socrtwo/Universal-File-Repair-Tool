@@ -1,0 +1,51 @@
+name: Build macOS App
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'macos/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'macos/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+
+    - name: Install dependencies
+      run: |
+        cd macos
+        npm install
+
+    - name: Build macOS App
+      run: |
+        cd macos
+        npm run build
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        CSC_IDENTITY_AUTO_DISCOVERY: false
+
+    - name: Upload DMG
+      uses: actions/upload-artifact@v4
+      with:
+        name: FileRepairTool-macOS-DMG
+        path: macos/dist/*.dmg
+        if-no-files-found: warn
+
+    - name: Upload ZIP
+      uses: actions/upload-artifact@v4
+      with:
+        name: FileRepairTool-macOS-ZIP
+        path: macos/dist/*.zip
+        if-no-files-found: warn

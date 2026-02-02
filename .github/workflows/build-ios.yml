@@ -1,0 +1,57 @@
+name: Build iOS App
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'ios/**'
+  pull_request:
+    branches: [ main ]
+    paths:
+      - 'ios/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Select Xcode
+      run: sudo xcode-select -s /Applications/Xcode_15.4.app/Contents/Developer
+
+    - name: Build iOS App
+      run: |
+        cd ios
+        xcodebuild build \
+          -project FileRepairTool.xcodeproj \
+          -scheme FileRepairTool \
+          -destination 'generic/platform=iOS Simulator' \
+          -configuration Release \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          | tail -20
+
+    - name: Archive for Distribution
+      run: |
+        cd ios
+        xcodebuild archive \
+          -project FileRepairTool.xcodeproj \
+          -scheme FileRepairTool \
+          -destination 'generic/platform=iOS' \
+          -archivePath build/FileRepairTool.xcarchive \
+          -configuration Release \
+          CODE_SIGNING_ALLOWED=NO \
+          CODE_SIGNING_REQUIRED=NO \
+          CODE_SIGN_IDENTITY="" \
+          SKIP_INSTALL=NO \
+          || echo "Archive requires signing for full IPA export"
+
+    - name: Upload Build Artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: FileRepairTool-iOS
+        path: ios/build/
+        if-no-files-found: warn

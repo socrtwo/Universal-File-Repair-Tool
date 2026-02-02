@@ -46,11 +46,6 @@
         #detectedType { display: none; }
         
         .section-title { color: var(--accent); font-size: 0.9em; margin: 20px 0 10px 0; text-transform: uppercase; letter-spacing: 1px; }
-        .modal-close { background: var(--ok); color: #000; margin-top: 20px; }
-        .tip-box { background: rgba(255,215,64,0.1); border: 1px solid #ffd740; border-radius: 8px; padding: 15px; margin-top: 15px; display: none; }
-        .tip-box h4 { color: #ffd740; margin: 0 0 10px 0; }
-        .tip-box p { margin: 5px 0; font-size: 0.9em; }
-        .tip-box a { color: var(--accent); }
     </style>
 </head>
 <body>
@@ -83,16 +78,6 @@
         </div>
     </div>
     <div id="log">Ready. Load a file to begin repair...</div>
-    <div id="tipBox" class="tip-box"></div>
-</div>
-
-<!-- COMPATIBILITY TIPS MODAL -->
-<div id="compatModal" class="modal-overlay">
-    <div class="modal">
-        <h2>💡 Important: If the Repaired File Won't Open</h2>
-        <div id="compatContent"></div>
-        <button class="modal-close" onclick="document.getElementById('compatModal').style.display='none'">Got It!</button>
-    </div>
 </div>
 
 <!-- STRATEGY MODAL -->
@@ -107,34 +92,31 @@
 
 <script>
 // ============================================================================
-// ANDROID BRIDGE FUNCTIONS
+// iOS BRIDGE FUNCTIONS
 // ============================================================================
-function isAndroid() {
-    return typeof Android !== 'undefined';
+function isiOS() {
+    return window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.saveFile;
 }
 
-function loadFileFromAndroid(fileName, base64Data) {
+function loadFileFromiOS(fileName, base64Data) {
     try {
-        // Decode base64 to ArrayBuffer
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
         for (let i = 0; i < binaryString.length; i++) {
             bytes[i] = binaryString.charCodeAt(i);
         }
-        
-        // Store in global state
+
         fileBuf = bytes.buffer;
         window.fileName = fileName;
-        
-        // Update UI
+
         document.getElementById('btnRun').disabled = false;
         document.getElementById('btnDownload').style.display = 'none';
         log(`Loaded ${fileName} (${(fileBuf.byteLength/1024).toFixed(2)} KB)`);
-        
+
         const u8 = new Uint8Array(fileBuf);
         const detected = detectFormat(u8, fileName);
         const typeEl = document.getElementById('detectedType');
-        
+
         if (detected) {
             const info = getFormatInfo(detected);
             typeEl.innerHTML = `${info.icon} Detected: <strong>${info.name}</strong>`;
@@ -144,35 +126,35 @@ function loadFileFromAndroid(fileName, base64Data) {
             typeEl.className = `detected-type detected-unknown`;
         }
         typeEl.style.display = 'block';
-        
-        if (isAndroid()) {
-            Android.showToast('File loaded: ' + fileName);
+
+        if (isiOS()) {
+            window.webkit.messageHandlers.showToast.postMessage('File loaded: ' + fileName);
         }
     } catch (e) {
         log('Error loading file: ' + e.message, 'del');
-        if (isAndroid()) {
-            Android.showToast('Error loading file');
+        if (isiOS()) {
+            window.webkit.messageHandlers.showToast.postMessage('Error loading file');
         }
     }
 }
 
-function saveFileToAndroid(blob, fileName) {
+function saveFileToiOS(blob, fileName) {
     const reader = new FileReader();
     reader.onload = function() {
         const base64Data = reader.result.split(',')[1];
-        if (isAndroid()) {
-            Android.saveFile(fileName, base64Data);
+        if (isiOS()) {
+            window.webkit.messageHandlers.saveFile.postMessage({fileName: fileName, data: base64Data});
         }
     };
     reader.readAsDataURL(blob);
 }
 
-function shareFileFromAndroid(blob, fileName) {
+function shareFileFromiOS(blob, fileName) {
     const reader = new FileReader();
     reader.onload = function() {
         const base64Data = reader.result.split(',')[1];
-        if (isAndroid()) {
-            Android.shareFile(fileName, base64Data);
+        if (isiOS()) {
+            window.webkit.messageHandlers.shareFile.postMessage({fileName: fileName, data: base64Data});
         }
     };
     reader.readAsDataURL(blob);
@@ -588,11 +570,11 @@ function detectFormat(u8, fName) {
 
 function getFormatInfo(format) {
     const info = {
-        docx: { name: 'Word Document', icon: '📄', mainPath: 'word/document.xml', color: 'word', ext: 'docx', showCompat: 'docx' },
-        xlsx: { name: 'Excel Workbook', icon: '📊', mainPath: 'xl/worksheets/', color: 'excel', ext: 'xlsx', showCompat: 'xlsx' },
-        pptx: { name: 'PowerPoint Presentation', icon: '📽️', mainPath: 'ppt/slides/', color: 'ppt', ext: 'pptx', showCompat: 'pptx' },
+        docx: { name: 'Word Document', icon: '📄', mainPath: 'word/document.xml', color: 'word', ext: 'docx' },
+        xlsx: { name: 'Excel Workbook', icon: '📊', mainPath: 'xl/worksheets/', color: 'excel', ext: 'xlsx' },
+        pptx: { name: 'PowerPoint Presentation', icon: '📽️', mainPath: 'ppt/slides/', color: 'ppt', ext: 'pptx' },
         zip: { name: 'ZIP Archive', icon: '📦', mainPath: '', color: 'zip', ext: 'zip' },
-        pdf: { name: 'PDF Document', icon: '📕', mainPath: '', color: 'pdf', ext: 'pdf', showCompat: 'pdf' }
+        pdf: { name: 'PDF Document', icon: '📕', mainPath: '', color: 'pdf', ext: 'pdf' }
     };
     return info[format] || { name: 'Unknown', icon: '📁', mainPath: '', color: 'unknown', ext: 'bin' };
 }
@@ -642,8 +624,7 @@ document.getElementById('btnRun').addEventListener('click', async () => {
     log("Starting Universal Repair Engine...", 'warn');
     document.getElementById('btnRun').disabled = true;
     document.getElementById('btnDownload').style.display = 'none';
-    document.getElementById('tipBox').style.display = 'none';
-
+    
     contentCandidates = [];
     recoveredAssets = {};
     
@@ -681,93 +662,9 @@ document.getElementById('btnRun').addEventListener('click', async () => {
         return;
     }
     
-    // Show compatibility tips for Office/PDF formats
-    if (fmtInfo.showCompat) {
-        showCompatibilityTips(fmtInfo.showCompat);
-    }
-
     setupDownload(finalBlobs, `repaired_bundle.zip`);
     log("Process Complete! 🎉", 'ok');
 });
-
-// ============================================================================
-// COMPATIBILITY TIPS
-// ============================================================================
-const COMPAT_TIPS = {
-    docx: `
-        <h3>📄 Repaired Word Document</h3>
-        <p>If <strong>Microsoft Word</strong> won't open the repaired file, follow these steps:</p>
-        <ol style="color:#ccc; line-height:2;">
-            <li>Download and install <strong>LibreOffice</strong> (free): <a href="https://www.libreoffice.org/download/download/" target="_blank">www.libreoffice.org</a></li>
-            <li>Open the repaired <code>.docx</code> file in <strong>LibreOffice Writer</strong></li>
-            <li>If it opens successfully, go to <strong>File → Save As</strong></li>
-            <li>Choose format: <strong>"Microsoft Word 2007-365 (.docx)"</strong> and save</li>
-            <li>The re-saved file should now open normally in Microsoft Word</li>
-        </ol>
-        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Why this works:</strong> LibreOffice is more tolerant of partially corrupted Office files. When it re-saves the document, it writes a clean, fully valid .docx structure that Microsoft Word will accept.</p>
-    `,
-    xlsx: `
-        <h3>📊 Repaired Excel Workbook</h3>
-        <p>If <strong>Microsoft Excel</strong> won't open the repaired file, follow these steps:</p>
-        <ol style="color:#ccc; line-height:2;">
-            <li>Download and install <strong>LibreOffice</strong> (free): <a href="https://www.libreoffice.org/download/download/" target="_blank">www.libreoffice.org</a></li>
-            <li>Open the repaired <code>.xlsx</code> file in <strong>LibreOffice Calc</strong></li>
-            <li>If it opens successfully, go to <strong>File → Save As</strong></li>
-            <li>Choose format: <strong>"Microsoft Excel 2007-365 (.xlsx)"</strong> and save</li>
-            <li>The re-saved file should now open normally in Microsoft Excel</li>
-        </ol>
-        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Why this works:</strong> LibreOffice is more tolerant of partially corrupted Office files. When it re-saves the workbook, it writes a clean, fully valid .xlsx structure that Microsoft Excel will accept.</p>
-    `,
-    pptx: `
-        <h3>📽️ Repaired PowerPoint Presentation</h3>
-        <p>If <strong>Microsoft PowerPoint</strong> won't open the repaired file, follow these steps:</p>
-        <ol style="color:#ccc; line-height:2;">
-            <li>Download and install <strong>LibreOffice</strong> (free): <a href="https://www.libreoffice.org/download/download/" target="_blank">www.libreoffice.org</a></li>
-            <li>Open the repaired <code>.pptx</code> file in <strong>LibreOffice Impress</strong></li>
-            <li>If it opens successfully, go to <strong>File → Save As</strong></li>
-            <li>Choose format: <strong>"Microsoft PowerPoint 2007-365 (.pptx)"</strong> and save</li>
-            <li>The re-saved file should now open normally in Microsoft PowerPoint</li>
-        </ol>
-        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Why this works:</strong> LibreOffice is more tolerant of partially corrupted Office files. When it re-saves the presentation, it writes a clean, fully valid .pptx structure that Microsoft PowerPoint will accept.</p>
-    `,
-    pdf: `
-        <h3>📕 For PDF Files:</h3>
-        <p>If <strong>Adobe Acrobat</strong> won't open the repaired file, try:</p>
-        <ul>
-            <li><strong>Foxit Reader</strong> (Free) - <a href="https://www.foxit.com/pdf-reader/" target="_blank">Download Foxit</a></li>
-            <li><strong>SumatraPDF</strong> (Free, Windows) - <a href="https://www.sumatrapdfreader.org/" target="_blank">Download Sumatra</a></li>
-            <li><strong>Chrome/Edge/Firefox</strong> - Open the PDF directly in your web browser</li>
-            <li><strong>Preview</strong> (Mac) - Built-in macOS PDF viewer</li>
-        </ul>
-        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Tip:</strong> Web browsers and lightweight PDF viewers are often more forgiving with damaged PDFs.</p>
-    `
-};
-
-function showCompatibilityTips(type) {
-    const tipBox = document.getElementById('tipBox');
-    const modal = document.getElementById('compatModal');
-    const content = document.getElementById('compatContent');
-
-    // Prepare and auto-show the popup modal
-    content.innerHTML = COMPAT_TIPS[type] || '';
-    modal.style.display = 'flex';
-
-    // Also show inline tip as a reminder
-    if (type === 'docx' || type === 'xlsx' || type === 'pptx') {
-        const appNames = { docx: 'Writer', xlsx: 'Calc', pptx: 'Impress' };
-        const msNames = { docx: 'Word', xlsx: 'Excel', pptx: 'PowerPoint' };
-        tipBox.innerHTML = `
-            <h4>💡 Can't Open in Microsoft ${msNames[type]}?</h4>
-            <p>Try opening in <strong>LibreOffice ${appNames[type]}</strong>, then re-save as a ${msNames[type]} file. <a href="#" onclick="document.getElementById('compatModal').style.display='flex'; return false;">See full instructions →</a></p>
-        `;
-    } else if (type === 'pdf') {
-        tipBox.innerHTML = `
-            <h4>💡 Can't Open the Repaired PDF?</h4>
-            <p>Try <strong>Foxit Reader</strong>, <strong>SumatraPDF</strong>, or open directly in your <strong>web browser</strong>. <a href="#" onclick="document.getElementById('compatModal').style.display='flex'; return false;">See more options →</a></p>
-        `;
-    }
-    tipBox.style.display = 'block';
-}
 
 // ============================================================================
 // PDF REPAIR
@@ -1077,14 +974,14 @@ let currentRepairedName = null;
 function setupDownload(finalBlobs, zipName) {
     const dlBtn = document.getElementById('btnDownload');
     let finalUrl;
-    
+
     if (finalBlobs.length === 1) {
         currentRepairedBlob = finalBlobs[0].blob;
         currentRepairedName = finalBlobs[0].name;
-        
-        if (isAndroid()) {
-            dlBtn.onclick = () => { 
-                saveFileToAndroid(currentRepairedBlob, currentRepairedName);
+
+        if (isiOS()) {
+            dlBtn.onclick = () => {
+                saveFileToiOS(currentRepairedBlob, currentRepairedName);
             };
             dlBtn.innerText = `Save ${currentRepairedName.split('.').pop().toUpperCase()}`;
         } else {
@@ -1097,13 +994,13 @@ function setupDownload(finalBlobs, zipName) {
             const bundle = new JSZip();
             finalBlobs.forEach(f => bundle.file(f.name, f.blob));
             const bundleBlob = await bundle.generateAsync({ type: "blob" });
-            
+
             currentRepairedBlob = bundleBlob;
             currentRepairedName = zipName;
-            
-            if (isAndroid()) {
+
+            if (isiOS()) {
                 dlBtn.onclick = () => {
-                    saveFileToAndroid(currentRepairedBlob, currentRepairedName);
+                    saveFileToiOS(currentRepairedBlob, currentRepairedName);
                 };
                 dlBtn.innerText = "Save Bundle ZIP";
             } else {
@@ -1113,11 +1010,11 @@ function setupDownload(finalBlobs, zipName) {
             }
         })();
     }
-    
+
     dlBtn.style.display = 'inline-block';
-    
-    // Add share button for Android
-    if (isAndroid()) {
+
+    // Add share button for iOS
+    if (isiOS()) {
         let shareBtn = document.getElementById('btnShare');
         if (!shareBtn) {
             shareBtn = document.createElement('button');
@@ -1129,18 +1026,18 @@ function setupDownload(finalBlobs, zipName) {
         shareBtn.innerText = '📤 Share';
         shareBtn.onclick = () => {
             if (currentRepairedBlob && currentRepairedName) {
-                shareFileFromAndroid(currentRepairedBlob, currentRepairedName);
+                shareFileFromiOS(currentRepairedBlob, currentRepairedName);
             }
         };
         shareBtn.style.display = 'inline-block';
     }
-    
+
     document.getElementById('btnRun').disabled = false;
 }
 
 function download(url, name) {
-    if (isAndroid() && currentRepairedBlob) {
-        saveFileToAndroid(currentRepairedBlob, name);
+    if (isiOS() && currentRepairedBlob) {
+        saveFileToiOS(currentRepairedBlob, name);
     } else {
         const a = document.createElement('a');
         a.href = url;

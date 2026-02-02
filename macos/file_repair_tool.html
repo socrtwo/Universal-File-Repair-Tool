@@ -7,7 +7,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <style>
         :root { --bg: #121212; --panel: #1f1f1f; --text: #e0e0e0; --accent: #00e5ff; --ok: #76ff03; --del: #ff1744; --btn-bg: #333; --word: #2b579a; --excel: #217346; --ppt: #d24726; --zip: #f0a030; --pdf: #e44d26; --jpg: #e91e63; --png: #9c27b0; --mp3: #4caf50; }
-        body { font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding: 20px; display: flex; justify-content: center; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background: var(--bg); color: var(--text); padding: 20px; padding-top: 40px; display: flex; justify-content: center; -webkit-app-region: drag; }
+        .main, button, input, a, .strategy-btn { -webkit-app-region: no-drag; }
         .main { width: 100%; max-width: 1000px; }
         .card { background: var(--panel); border: 1px solid #333; border-radius: 8px; padding: 20px; margin-bottom: 15px; box-shadow: 0 4px 12px rgba(0,0,0,0.5); }
         h1 { margin-top: 0; color: var(--accent); }
@@ -126,7 +127,7 @@
 <div id="compatModal" class="modal-overlay">
     <div class="modal">
         <h2>💡 Important: If the Repaired File Won't Open</h2>
-        <p>Follow these steps to get your file working again:</p>
+        <p>If the repaired file doesn't open in your primary application, try these alternatives:</p>
         
         <div id="compatContent"></div>
         
@@ -146,13 +147,13 @@
 
 <script>
 // ============================================================================
-// WINDOWS/ELECTRON BRIDGE FUNCTIONS
+// ELECTRON BRIDGE FUNCTIONS (macOS)
 // ============================================================================
 function isElectron() {
     return window.electronAPI && window.electronAPI.isElectron;
 }
 
-function loadFileFromWindows(fName, base64Data) {
+function loadFileFromElectron(fName, base64Data) {
     try {
         const binaryString = atob(base64Data);
         const bytes = new Uint8Array(binaryString.length);
@@ -188,7 +189,11 @@ function loadFileFromWindows(fName, base64Data) {
     }
 }
 
-function saveFileToWindows(blob, fileName) {
+// Aliases for platform-specific calls from main process
+function loadFileFromMac(fName, base64Data) { loadFileFromElectron(fName, base64Data); }
+function loadFileFromWindows(fName, base64Data) { loadFileFromElectron(fName, base64Data); }
+
+function saveFileToElectron(blob, fileName) {
     const reader = new FileReader();
     reader.onload = function() {
         const base64Data = reader.result.split(',')[1];
@@ -1330,7 +1335,7 @@ function setupDownload(finalBlobs, zipName) {
         currentRepairedName = finalBlobs[0].name;
 
         if (isElectron()) {
-            dlBtn.onclick = () => { saveFileToWindows(currentRepairedBlob, currentRepairedName); };
+            dlBtn.onclick = () => { saveFileToElectron(currentRepairedBlob, currentRepairedName); };
             dlBtn.innerText = `Save ${currentRepairedName.split('.').pop().toUpperCase()}`;
         } else {
             finalUrl = URL.createObjectURL(finalBlobs[0].blob);
@@ -1347,7 +1352,7 @@ function setupDownload(finalBlobs, zipName) {
             currentRepairedName = zipName;
 
             if (isElectron()) {
-                dlBtn.onclick = () => { saveFileToWindows(currentRepairedBlob, currentRepairedName); };
+                dlBtn.onclick = () => { saveFileToElectron(currentRepairedBlob, currentRepairedName); };
                 dlBtn.innerText = "Save Bundle ZIP";
             } else {
                 finalUrl = URL.createObjectURL(bundleBlob);
@@ -1363,7 +1368,7 @@ function setupDownload(finalBlobs, zipName) {
 
 function download(url, name) {
     if (isElectron() && currentRepairedBlob) {
-        saveFileToWindows(currentRepairedBlob, name);
+        saveFileToElectron(currentRepairedBlob, name);
     } else {
         const a = document.createElement('a'); a.href = url; a.download = name; a.click();
     }

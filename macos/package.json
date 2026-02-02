@@ -1,0 +1,70 @@
+{
+  "name": "file-repair-tool",
+  "version": "5.0.0",
+  "description": "Universal File Repair Tool - Repairs corrupted DOCX, XLSX, PPTX, ZIP, PDF, JPG, PNG, and MP3 files",
+  "main": "main.js",
+  "author": "socrtwo",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder --mac",
+    "build:dmg": "electron-builder --mac dmg",
+    "build:zip": "electron-builder --mac zip",
+    "build:universal": "electron-builder --mac --universal"
+  },
+  "build": {
+    "appId": "com.socrtwo.filerepair",
+    "productName": "File Repair Tool",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "file_repair_tool.html",
+      "icon.icns"
+    ],
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": ["x64", "arm64"]
+        },
+        {
+          "target": "zip",
+          "arch": ["x64", "arm64"]
+        }
+      ],
+      "icon": "icon.icns",
+      "category": "public.app-category.utilities",
+      "darkModeSupport": true,
+      "hardenedRuntime": true,
+      "gatekeeperAssess": false,
+      "entitlements": "entitlements.mac.plist",
+      "entitlementsInherit": "entitlements.mac.plist"
+    },
+    "dmg": {
+      "title": "File Repair Tool",
+      "iconSize": 80,
+      "contents": [
+        { "x": 190, "y": 320 },
+        { "x": 430, "y": 320, "type": "link", "path": "/Applications" }
+      ]
+    },
+    "fileAssociations": [
+      { "ext": "docx", "name": "Word Document", "role": "Editor" },
+      { "ext": "xlsx", "name": "Excel Workbook", "role": "Editor" },
+      { "ext": "pptx", "name": "PowerPoint Presentation", "role": "Editor" },
+      { "ext": "zip", "name": "ZIP Archive", "role": "Editor" },
+      { "ext": "pdf", "name": "PDF Document", "role": "Editor" },
+      { "ext": "jpg", "name": "JPEG Image", "role": "Editor" },
+      { "ext": "jpeg", "name": "JPEG Image", "role": "Editor" },
+      { "ext": "png", "name": "PNG Image", "role": "Editor" },
+      { "ext": "mp3", "name": "MP3 Audio", "role": "Editor" }
+    ]
+  },
+  "devDependencies": {
+    "electron": "^33.0.0",
+    "electron-builder": "^25.0.0"
+  }
+}

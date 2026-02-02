@@ -125,8 +125,8 @@
 <!-- COMPATIBILITY INFO MODAL -->
 <div id="compatModal" class="modal-overlay">
     <div class="modal">
-        <h2>💡 Compatibility Tips for Repaired Files</h2>
-        <p>If the repaired file doesn't open in your primary application, try these alternatives:</p>
+        <h2>💡 Important: If the Repaired File Won't Open</h2>
+        <p>Follow these steps to get your file working again:</p>
         
         <div id="compatContent"></div>
         
@@ -178,16 +178,41 @@ const DUMMY = {
 // COMPATIBILITY TIPS CONTENT
 // ============================================================================
 const COMPAT_TIPS = {
-    office: `
-        <h3>📄 For DOCX, XLSX, PPTX Files:</h3>
-        <p>If <strong>Microsoft Office</strong> won't open the repaired file, try:</p>
-        <ul>
-            <li><strong>LibreOffice</strong> (Free) - <a href="https://www.libreoffice.org/download/download/" target="_blank">Download LibreOffice</a></li>
-            <li><strong>Apache OpenOffice</strong> (Free) - <a href="https://www.openoffice.org/download/" target="_blank">Download OpenOffice</a></li>
-            <li><strong>Google Docs/Sheets/Slides</strong> - Upload to Google Drive and open online</li>
-            <li><strong>WPS Office</strong> (Free) - <a href="https://www.wps.com/" target="_blank">Download WPS Office</a></li>
-        </ul>
-        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Tip:</strong> LibreOffice is often more tolerant of partially corrupted Office files and may recover content that Microsoft Office rejects.</p>
+    docx: `
+        <h3>📄 Repaired Word Document</h3>
+        <p>If <strong>Microsoft Word</strong> won't open the repaired file, follow these steps:</p>
+        <ol style="color:#ccc; line-height:2;">
+            <li>Download and install <strong>LibreOffice</strong> (free): <a href="https://www.libreoffice.org/download/download/" target="_blank">www.libreoffice.org</a></li>
+            <li>Open the repaired <code>.docx</code> file in <strong>LibreOffice Writer</strong></li>
+            <li>If it opens successfully, go to <strong>File → Save As</strong></li>
+            <li>Choose format: <strong>"Microsoft Word 2007-365 (.docx)"</strong> and save</li>
+            <li>The re-saved file should now open normally in Microsoft Word</li>
+        </ol>
+        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Why this works:</strong> LibreOffice is more tolerant of partially corrupted Office files. When it re-saves the document, it writes a clean, fully valid .docx structure that Microsoft Word will accept.</p>
+    `,
+    xlsx: `
+        <h3>📊 Repaired Excel Workbook</h3>
+        <p>If <strong>Microsoft Excel</strong> won't open the repaired file, follow these steps:</p>
+        <ol style="color:#ccc; line-height:2;">
+            <li>Download and install <strong>LibreOffice</strong> (free): <a href="https://www.libreoffice.org/download/download/" target="_blank">www.libreoffice.org</a></li>
+            <li>Open the repaired <code>.xlsx</code> file in <strong>LibreOffice Calc</strong></li>
+            <li>If it opens successfully, go to <strong>File → Save As</strong></li>
+            <li>Choose format: <strong>"Microsoft Excel 2007-365 (.xlsx)"</strong> and save</li>
+            <li>The re-saved file should now open normally in Microsoft Excel</li>
+        </ol>
+        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Why this works:</strong> LibreOffice is more tolerant of partially corrupted Office files. When it re-saves the workbook, it writes a clean, fully valid .xlsx structure that Microsoft Excel will accept.</p>
+    `,
+    pptx: `
+        <h3>📽️ Repaired PowerPoint Presentation</h3>
+        <p>If <strong>Microsoft PowerPoint</strong> won't open the repaired file, follow these steps:</p>
+        <ol style="color:#ccc; line-height:2;">
+            <li>Download and install <strong>LibreOffice</strong> (free): <a href="https://www.libreoffice.org/download/download/" target="_blank">www.libreoffice.org</a></li>
+            <li>Open the repaired <code>.pptx</code> file in <strong>LibreOffice Impress</strong></li>
+            <li>If it opens successfully, go to <strong>File → Save As</strong></li>
+            <li>Choose format: <strong>"Microsoft PowerPoint 2007-365 (.pptx)"</strong> and save</li>
+            <li>The re-saved file should now open normally in Microsoft PowerPoint</li>
+        </ol>
+        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Why this works:</strong> LibreOffice is more tolerant of partially corrupted Office files. When it re-saves the presentation, it writes a clean, fully valid .pptx structure that Microsoft PowerPoint will accept.</p>
     `,
     pdf: `
         <h3>📕 For PDF Files:</h3>
@@ -195,11 +220,10 @@ const COMPAT_TIPS = {
         <ul>
             <li><strong>Foxit Reader</strong> (Free) - <a href="https://www.foxit.com/pdf-reader/" target="_blank">Download Foxit</a></li>
             <li><strong>SumatraPDF</strong> (Free, Windows) - <a href="https://www.sumatrapdfreader.org/" target="_blank">Download Sumatra</a></li>
-            <li><strong>Evince / Okular</strong> (Free, Linux) - Available in most Linux package managers</li>
             <li><strong>Chrome/Edge/Firefox</strong> - Open the PDF directly in your web browser</li>
             <li><strong>Preview</strong> (Mac) - Built-in macOS PDF viewer</li>
         </ul>
-        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Tip:</strong> Web browsers and lightweight PDF viewers are often more forgiving with damaged PDFs. If text was extracted, consider copying it to a new document.</p>
+        <p style="color:#ffd740; margin-top:15px;">💡 <strong>Tip:</strong> Web browsers and lightweight PDF viewers are often more forgiving with damaged PDFs.</p>
     `
 };
 
@@ -845,9 +869,9 @@ function detectFormat(u8, fName) {
 
 function getFormatInfo(format) {
     const info = {
-        docx: { name: 'Word Document', icon: '📄', color: 'word', ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', showCompat: 'office' },
-        xlsx: { name: 'Excel Workbook', icon: '📊', color: 'excel', ext: 'xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', showCompat: 'office' },
-        pptx: { name: 'PowerPoint Presentation', icon: '📽️', color: 'ppt', ext: 'pptx', mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', showCompat: 'office' },
+        docx: { name: 'Word Document', icon: '📄', color: 'word', ext: 'docx', mime: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', showCompat: 'docx' },
+        xlsx: { name: 'Excel Workbook', icon: '📊', color: 'excel', ext: 'xlsx', mime: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', showCompat: 'xlsx' },
+        pptx: { name: 'PowerPoint Presentation', icon: '📽️', color: 'ppt', ext: 'pptx', mime: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', showCompat: 'pptx' },
         zip: { name: 'ZIP Archive', icon: '📦', color: 'zip', ext: 'zip', mime: 'application/zip' },
         pdf: { name: 'PDF Document', icon: '📕', color: 'pdf', ext: 'pdf', mime: 'application/pdf', showCompat: 'pdf' },
         jpg: { name: 'JPEG Image', icon: '🖼️', color: 'jpg', ext: 'jpg', mime: 'image/jpeg' },
@@ -959,25 +983,26 @@ function showCompatibilityTips(type) {
     const tipBox = document.getElementById('tipBox');
     const modal = document.getElementById('compatModal');
     const content = document.getElementById('compatContent');
-    
-    // Show inline tip
-    if (type === 'office') {
+
+    // Prepare and auto-show the popup modal
+    content.innerHTML = COMPAT_TIPS[type] || '';
+    modal.style.display = 'flex';
+
+    // Also show inline tip as a reminder
+    if (type === 'docx' || type === 'xlsx' || type === 'pptx') {
+        const appNames = { docx: 'Writer', xlsx: 'Calc', pptx: 'Impress' };
+        const msNames = { docx: 'Word', xlsx: 'Excel', pptx: 'PowerPoint' };
         tipBox.innerHTML = `
-            <h4>💡 Can't Open the Repaired File?</h4>
-            <p>If Microsoft Office won't open the file, try <strong>LibreOffice</strong> or <strong>OpenOffice</strong> (free alternatives that are often more tolerant of damaged files).</p>
-            <p><a href="#" onclick="document.getElementById('compatModal').style.display='flex'; return false;">Click here for more options →</a></p>
+            <h4>💡 Can't Open in Microsoft ${msNames[type]}?</h4>
+            <p>Try opening in <strong>LibreOffice ${appNames[type]}</strong>, then re-save as a ${msNames[type]} file. <a href="#" onclick="document.getElementById('compatModal').style.display='flex'; return false;">See full instructions →</a></p>
         `;
     } else if (type === 'pdf') {
         tipBox.innerHTML = `
             <h4>💡 Can't Open the Repaired PDF?</h4>
-            <p>If Adobe Acrobat won't open the file, try <strong>Foxit Reader</strong>, <strong>SumatraPDF</strong>, or open it directly in your <strong>web browser</strong>.</p>
-            <p><a href="#" onclick="document.getElementById('compatModal').style.display='flex'; return false;">Click here for more options →</a></p>
+            <p>Try <strong>Foxit Reader</strong>, <strong>SumatraPDF</strong>, or open directly in your <strong>web browser</strong>. <a href="#" onclick="document.getElementById('compatModal').style.display='flex'; return false;">See more options →</a></p>
         `;
     }
     tipBox.style.display = 'block';
-    
-    // Prepare modal content
-    content.innerHTML = COMPAT_TIPS[type] || '';
 }
 
 // ============================================================================
