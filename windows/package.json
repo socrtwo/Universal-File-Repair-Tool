@@ -5,6 +5,10 @@
   "main": "main.js",
   "author": "socrtwo",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/socrtwo/Universal-File-Repair-Tool.git"
+  },
   "scripts": {
     "start": "electron .",
     "build": "electron-builder --win",
