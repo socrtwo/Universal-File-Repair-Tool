@@ -203,6 +203,10 @@ This builds all platforms and creates a GitHub Release with all artifacts attach
 ### Managing with Termux
 See [TERMUX_GUIDE.md](TERMUX_GUIDE.md) for instructions on setting up Termux for Git, cloning, pushing changes, and creating releases from the command line.
 
+## 🔒 Privacy Policy
+
+See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) — The app processes all files locally on your device. No data is collected, transmitted, or shared.
+
 ## 📄 License
 
 MIT License - See [LICENSE](LICENSE) for details.
