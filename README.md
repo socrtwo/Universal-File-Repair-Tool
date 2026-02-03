@@ -3,6 +3,8 @@
 [![Build All Platforms](https://github.com/socrtwo/Universal-File-Repair-Tool/actions/workflows/build-all-platforms.yml/badge.svg)](https://github.com/socrtwo/Universal-File-Repair-Tool/actions/workflows/build-all-platforms.yml)
 [![Build Android APK](https://github.com/socrtwo/Universal-File-Repair-Tool/actions/workflows/build-apk.yml/badge.svg)](https://github.com/socrtwo/Universal-File-Repair-Tool/actions/workflows/build-apk.yml)
 
+*Recover corrupted files — Office docs, PDFs, images, and audio — entirely on your device, across every platform.*
+
 A powerful file repair tool that recovers corrupted Office documents, ZIP archives, PDF files, images, and audio using advanced structure recovery and fault-tolerant decompression. Available on **Windows, macOS, Linux, Android, iOS, and the web**.
 
 ## 📥 Downloads
