@@ -213,6 +213,10 @@ See [PRIVACY_POLICY.md](PRIVACY_POLICY.md) — The app processes all files local
 
 MIT License - See [LICENSE](LICENSE) for details.
 
+## 📊 Analytics
+
+![Alt](https://repobeats.axiom.co/api/embed/fc4e5b2b9b9a8158f657a0a9963298e130effcb1.svg "Repobeats analytics image")
+
 ## 🙏 Credits
 
 - [JSZip](https://stuk.github.io/jszip/) - ZIP file handling
