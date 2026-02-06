@@ -11,6 +11,10 @@ on:
       - 'windows/**'
   workflow_dispatch:
 
+permissions:
+  contents: read
+  id-token: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -35,6 +39,23 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v3
+
+    - name: Sign Windows executables with Sigstore
+      shell: bash
+      run: |
+        for exe in windows/dist/*.exe; do
+          [ -f "$exe" ] || continue
+          echo "Signing $exe ..."
+          cosign sign-blob --yes --bundle "${exe}.bundle" "$exe"
+          echo "Verifying $exe ..."
+          cosign verify-blob --bundle "${exe}.bundle" \
+            --certificate-identity-regexp "https://github.com/socrtwo/Universal-File-Repair-Tool/" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$exe"
+        done
+
     - name: Upload Installer
       uses: actions/upload-artifact@v4
       with:
@@ -47,4 +68,11 @@ jobs:
       with:
         name: FileRepairTool-Windows-Portable
         path: windows/dist/*portable*.exe
+        if-no-files-found: warn
+
+    - name: Upload Sigstore bundles
+      uses: actions/upload-artifact@v4
+      with:
+        name: FileRepairTool-Windows-Sigstore
+        path: windows/dist/*.exe.bundle
         if-no-files-found: warn
