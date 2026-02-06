@@ -5,6 +5,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   # ─── Android APK ──────────────────────────────────────────────
@@ -58,17 +59,42 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    - name: Install Cosign
+      uses: sigstore/cosign-installer@v3
+
+    - name: Sign Windows executables with Sigstore
+      shell: bash
+      run: |
+        for exe in windows/dist/*.exe; do
+          [ -f "$exe" ] || continue
+          echo "Signing $exe ..."
+          cosign sign-blob --yes --bundle "${exe}.bundle" "$exe"
+          echo "Verifying $exe ..."
+          cosign verify-blob --bundle "${exe}.bundle" \
+            --certificate-identity-regexp "https://github.com/socrtwo/Universal-File-Repair-Tool/" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            "$exe"
+        done
+
     - name: Collect artifacts
       shell: bash
       run: |
         mkdir -p collect
         cp windows/dist/*.exe collect/ 2>/dev/null || true
+        cp windows/dist/*.exe.bundle collect/ 2>/dev/null || true
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
         name: windows-exe
         path: collect/*.exe
+        if-no-files-found: warn
+
+    - name: Upload Sigstore bundles
+      uses: actions/upload-artifact@v4
+      with:
+        name: windows-sigstore
+        path: collect/*.exe.bundle
         if-no-files-found: warn
 
   # ─── Linux AppImage & Deb ─────────────────────────────────────
@@ -207,20 +233,29 @@ jobs:
       uses: softprops/action-gh-release@v1
       with:
         tag_name: ${{ steps.tag.outputs.tag }}
-        name: "File Repair Tool - All Platforms (Unsigned)"
+        name: "File Repair Tool - All Platforms"
         body: |
           ## Universal File Repair Tool v5.0 - Multi-Platform Release
 
-          **All builds are unsigned.** Users may need to approve security prompts on first launch.
+          **Windows builds are signed with [Sigstore](https://www.sigstore.dev/) for supply-chain integrity.**
+          Other platform builds are unsigned. Users may need to approve security prompts on first launch.
 
           ### Downloads
           | Platform | File | Notes |
           |----------|------|-------|
           | 🤖 Android | `FileRepairTool-Android.apk` | Enable "Install from unknown sources" |
-          | 🪟 Windows | `.exe` installer + portable | Click "More info" → "Run anyway" on SmartScreen |
+          | 🪟 Windows | `.exe` installer + portable | Signed via Sigstore (`.bundle` files included) |
           | 🐧 Linux | `.AppImage` + `.deb` | `chmod +x` the AppImage to run |
           | 🍎 macOS | `.dmg` | Right-click → Open to bypass Gatekeeper |
           | 📱 iOS | Simulator `.zip` | For simulator testing only (no signing) |
+
+          ### Verifying Windows Signatures
+          ```bash
+          cosign verify-blob --bundle <file>.exe.bundle \
+            --certificate-identity-regexp "https://github.com/socrtwo/Universal-File-Repair-Tool/" \
+            --certificate-oidc-issuer "https://token.actions.githubusercontent.com" \
+            <file>.exe
+          ```
 
           ### Supported Formats
           DOCX, XLSX, PPTX, ZIP, PDF, JPG, PNG, MP3
