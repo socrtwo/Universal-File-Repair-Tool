@@ -39,6 +39,40 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    # ── Azure Trusted Signing (Authenticode) ──────────────────
+    # Requires repo secrets: AZURE_TENANT_ID, AZURE_CLIENT_ID,
+    # AZURE_CLIENT_SECRET, AZURE_ENDPOINT, AZURE_CODE_SIGNING_ACCOUNT,
+    # AZURE_CERTIFICATE_PROFILE_NAME
+    - name: Check Azure Trusted Signing configuration
+      id: check-azure
+      shell: bash
+      run: |
+        if [ -n "$AZURE_CLIENT_ID" ]; then
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::Azure Trusted Signing secrets not configured — skipping Authenticode signing."
+        fi
+      env:
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+
+    - name: Sign with Azure Trusted Signing
+      if: steps.check-azure.outputs.configured == 'true'
+      uses: azure/trusted-signing-action@v0.4.0
+      with:
+        azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        endpoint: ${{ secrets.AZURE_ENDPOINT }}
+        trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
+        certificate-profile-name: ${{ secrets.AZURE_CERTIFICATE_PROFILE_NAME }}
+        files-folder: ${{ github.workspace }}\windows\dist
+        files-folder-filter: exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
+
+    # ── Sigstore (supply-chain attestation) ────────────────────
     - name: Install Cosign
       uses: sigstore/cosign-installer@v3
 

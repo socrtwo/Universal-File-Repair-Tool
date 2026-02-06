@@ -59,6 +59,37 @@ jobs:
       env:
         GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
+    # ── Azure Trusted Signing (Authenticode) ──────────────────
+    - name: Check Azure Trusted Signing configuration
+      id: check-azure
+      shell: bash
+      run: |
+        if [ -n "$AZURE_CLIENT_ID" ]; then
+          echo "configured=true" >> "$GITHUB_OUTPUT"
+        else
+          echo "configured=false" >> "$GITHUB_OUTPUT"
+          echo "::warning::Azure Trusted Signing secrets not configured — skipping Authenticode signing."
+        fi
+      env:
+        AZURE_CLIENT_ID: ${{ secrets.AZURE_CLIENT_ID }}
+
+    - name: Sign with Azure Trusted Signing
+      if: steps.check-azure.outputs.configured == 'true'
+      uses: azure/trusted-signing-action@v0.4.0
+      with:
+        azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+        azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+        azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+        endpoint: ${{ secrets.AZURE_ENDPOINT }}
+        trusted-signing-account-name: ${{ secrets.AZURE_CODE_SIGNING_ACCOUNT }}
+        certificate-profile-name: ${{ secrets.AZURE_CERTIFICATE_PROFILE_NAME }}
+        files-folder: ${{ github.workspace }}\windows\dist
+        files-folder-filter: exe
+        file-digest: SHA256
+        timestamp-rfc3161: http://timestamp.acs.microsoft.com
+        timestamp-digest: SHA256
+
+    # ── Sigstore (supply-chain attestation) ────────────────────
     - name: Install Cosign
       uses: sigstore/cosign-installer@v3
 
@@ -237,19 +268,20 @@ jobs:
         body: |
           ## Universal File Repair Tool v5.0 - Multi-Platform Release
 
-          **Windows builds are signed with [Sigstore](https://www.sigstore.dev/) for supply-chain integrity.**
+          **Windows builds are Authenticode-signed with [Azure Trusted Signing](https://learn.microsoft.com/en-us/azure/trusted-signing/) and attested via [Sigstore](https://www.sigstore.dev/).**
           Other platform builds are unsigned. Users may need to approve security prompts on first launch.
 
           ### Downloads
           | Platform | File | Notes |
           |----------|------|-------|
           | 🤖 Android | `FileRepairTool-Android.apk` | Enable "Install from unknown sources" |
-          | 🪟 Windows | `.exe` installer + portable | Signed via Sigstore (`.bundle` files included) |
+          | 🪟 Windows | `.exe` installer + portable | Authenticode-signed + Sigstore attested |
           | 🐧 Linux | `.AppImage` + `.deb` | `chmod +x` the AppImage to run |
           | 🍎 macOS | `.dmg` | Right-click → Open to bypass Gatekeeper |
           | 📱 iOS | Simulator `.zip` | For simulator testing only (no signing) |
 
           ### Verifying Windows Signatures
+          Sigstore supply-chain attestation:
           ```bash
           cosign verify-blob --bundle <file>.exe.bundle \
             --certificate-identity-regexp "https://github.com/socrtwo/Universal-File-Repair-Tool/" \
