@@ -1,5 +1,10 @@
 # Universal File Repair Tool
 
+<!--PAGES_LINK_BANNER-->
+> 🌐 **Live page:** [https://socrtwo.github.io/Universal-File-Repair-Tool/](https://socrtwo.github.io/Universal-File-Repair-Tool/)  
+> 📦 **Releases:** [github.com/socrtwo/Universal-File-Repair-Tool/releases](https://github.com/socrtwo/Universal-File-Repair-Tool/releases)
+<!--/PAGES_LINK_BANNER-->
+
 [![Build All Platforms](https://github.com/socrtwo/Universal-File-Repair-Tool/actions/workflows/build-all-platforms.yml/badge.svg)](https://github.com/socrtwo/Universal-File-Repair-Tool/actions/workflows/build-all-platforms.yml)
 [![Build Android APK](https://github.com/socrtwo/Universal-File-Repair-Tool/actions/workflows/build-apk.yml/badge.svg)](https://github.com/socrtwo/Universal-File-Repair-Tool/actions/workflows/build-apk.yml)
 
