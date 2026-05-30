@@ -209,9 +209,69 @@ jobs:
         path: FileRepairTool-iOS-Simulator.zip
         if-no-files-found: warn
 
+  # ─── Web (self-hostable static app) ───────────────────────────
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Package web app
+      run: |
+        rm -rf _web && mkdir -p _web
+        cp -r web/. _web/
+        {
+          echo "Universal File Repair Tool - Web"
+          echo ""
+          echo "Open index.html in any modern browser, or host this folder on any"
+          echo "static web server (GitHub Pages, Netlify, Cloudflare Pages, S3...)."
+          echo ""
+          echo "All file repair runs client-side in the browser; nothing is uploaded."
+        } > _web/INSTALL-WEB.txt
+        ( cd _web && zip -r ../FileRepairTool-Web.zip . )
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: web-app
+        path: FileRepairTool-Web.zip
+        if-no-files-found: error
+
+  # ─── ChromeOS (installable PWA / web bundle) ──────────────────
+  build-chromeos:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Package ChromeOS bundle
+      run: |
+        rm -rf _chromeos && mkdir -p _chromeos/app
+        cp -r web/. _chromeos/app/
+        {
+          echo "Universal File Repair Tool - ChromeOS"
+          echo ""
+          echo "ChromeOS runs this app directly in Chrome; no APK or extension needed."
+          echo ""
+          echo "Use it:"
+          echo "  1. Unzip into Files -> My files."
+          echo "  2. Open app/index.html in Chrome."
+          echo ""
+          echo "Install as an app: open the hosted version in Chrome and use the"
+          echo "address-bar install icon (or menu -> Install) so it appears in your"
+          echo "launcher. Play-Store Chromebooks can alternatively sideload the"
+          echo "Android APK from this same release."
+        } > _chromeos/INSTALL-CHROMEOS.txt
+        ( cd _chromeos && zip -r ../FileRepairTool-ChromeOS.zip . )
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromeos-bundle
+        path: FileRepairTool-ChromeOS.zip
+        if-no-files-found: error
+
   # ─── Create Release ───────────────────────────────────────────
   release:
-    needs: [build-android, build-windows, build-linux, build-macos, build-ios]
+    needs: [build-android, build-windows, build-linux, build-macos, build-ios, build-web, build-chromeos]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -248,6 +308,8 @@ jobs:
           | 🐧 Linux | `.AppImage` + `.deb` | `chmod +x` the AppImage to run |
           | 🍎 macOS | `.dmg` | Right-click → Open to bypass Gatekeeper |
           | 📱 iOS | Simulator `.zip` | For simulator testing only (no signing) |
+          | 🟢 ChromeOS | `FileRepairTool-ChromeOS.zip` | Install from Chrome, or open `app/index.html`; Play-Store Chromebooks can sideload the APK |
+          | 🌐 Web | `FileRepairTool-Web.zip` | Open `index.html` or self-host; runs 100% client-side |
 
           ### Verifying Windows Signatures
           ```bash
