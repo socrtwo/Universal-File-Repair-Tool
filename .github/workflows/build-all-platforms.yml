@@ -209,9 +209,73 @@ jobs:
         path: FileRepairTool-iOS-Simulator.zip
         if-no-files-found: warn
 
+  # ─── Web & ChromeOS (app HTML + install instructions) ────────
+  build-web:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Package Web zip
+      run: |
+        mkdir -p pkg-web
+        cp file_repair_tool_v5.html pkg-web/
+        cp file_repair_tool_v5.html pkg-web/index.html
+        printf '%s\n' \
+          '# Universal File Repair Tool — Web' \
+          '' \
+          'The entire app is a single self-contained HTML file.' \
+          '' \
+          '## Run locally' \
+          '' \
+          'Unzip this archive and open `file_repair_tool_v5.html` (or' \
+          '`index.html` — same file) in any modern browser. No server or' \
+          'install is required; files never leave your machine.' \
+          '' \
+          '## Self-host' \
+          '' \
+          'Copy the contents of this archive to any static web server.' \
+          '`index.html` is provided so the app loads at the directory root.' \
+          > pkg-web/INSTALL.md
+        cd pkg-web
+        zip -r ../FileRepairTool-Web.zip .
+
+    - name: Package ChromeOS zip
+      run: |
+        mkdir -p pkg-chromeos
+        cp file_repair_tool_v5.html pkg-chromeos/
+        cp file_repair_tool_v5.html pkg-chromeos/index.html
+        printf '%s\n' \
+          '# Universal File Repair Tool on ChromeOS' \
+          '' \
+          '## Recommended: install from the hosted page' \
+          '' \
+          '1. Open https://socrtwo.github.io/Universal-File-Repair-Tool/ in Chrome.' \
+          '2. Click the Install icon in the address bar (right-hand side)' \
+          '   to add the app to your launcher.' \
+          '' \
+          '## Offline alternative' \
+          '' \
+          'Unzip this archive and open `file_repair_tool_v5.html` (or' \
+          '`index.html` — same file) directly in Chrome.' \
+          > pkg-chromeos/INSTALL.md
+        cd pkg-chromeos
+        zip -r ../FileRepairTool-ChromeOS.zip .
+
+    - name: Upload Web artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: web-zip
+        path: FileRepairTool-Web.zip
+
+    - name: Upload ChromeOS artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: chromeos-zip
+        path: FileRepairTool-ChromeOS.zip
+
   # ─── Create Release ───────────────────────────────────────────
   release:
-    needs: [build-android, build-windows, build-linux, build-macos, build-ios]
+    needs: [build-android, build-windows, build-linux, build-macos, build-ios, build-web]
     if: ${{ always() }}
     runs-on: ubuntu-latest
     steps:
@@ -248,6 +312,8 @@ jobs:
           | 🐧 Linux | `.AppImage` + `.deb` | `chmod +x` the AppImage to run |
           | 🍎 macOS | `.dmg` | Right-click → Open to bypass Gatekeeper |
           | 📱 iOS | Simulator `.zip` | For simulator testing only (no signing) |
+          | 🌐 Web | `FileRepairTool-Web.zip` | Unzip and open the HTML in any browser, or self-host |
+          | 💻 ChromeOS | `FileRepairTool-ChromeOS.zip` | Open https://socrtwo.github.io/Universal-File-Repair-Tool/ in Chrome → Install, or open the HTML directly |
 
           ### Verifying Windows Signatures
           ```bash
