@@ -16,8 +16,8 @@ A powerful file repair tool that recovers corrupted Office documents, ZIP archiv
 
 | Platform | Download | Notes |
 |----------|----------|-------|
-| 🪟 **Windows** (installer) | [File.Repair.Tool.Setup.5.0.0.exe](https://github.com/socrtwo/Universal-File-Repair-Tool/releases/latest) | Signed via [Sigstore](https://www.sigstore.dev/) |
-| 🪟 **Windows** (portable) | [File.Repair.Tool.5.0.0.exe](https://github.com/socrtwo/Universal-File-Repair-Tool/releases/latest) | Signed via [Sigstore](https://www.sigstore.dev/) |
+| 🪟 **Windows** (installer) | [File.Repair.Tool.Setup.5.0.0.exe](https://github.com/socrtwo/Universal-File-Repair-Tool/releases/latest) | Authenticode-signed (Azure Trusted Signing) + [Sigstore](https://www.sigstore.dev/) |
+| 🪟 **Windows** (portable) | [File.Repair.Tool.5.0.0.exe](https://github.com/socrtwo/Universal-File-Repair-Tool/releases/latest) | Authenticode-signed (Azure Trusted Signing) + [Sigstore](https://www.sigstore.dev/) |
 | 🍎 **macOS** (Apple Silicon) | [File.Repair.Tool-5.0.0-arm64.dmg](https://github.com/socrtwo/Universal-File-Repair-Tool/releases/latest) | Right-click → Open to bypass Gatekeeper |
 | 🍎 **macOS** (Intel) | [File.Repair.Tool-5.0.0.dmg](https://github.com/socrtwo/Universal-File-Repair-Tool/releases/latest) | Right-click → Open to bypass Gatekeeper |
 | 🐧 **Linux** (AppImage) | [File.Repair.Tool-5.0.0.AppImage](https://github.com/socrtwo/Universal-File-Repair-Tool/releases/latest) | `chmod +x` then run |
@@ -26,9 +26,13 @@ A powerful file repair tool that recovers corrupted Office documents, ZIP archiv
 | 📱 **iOS** (Simulator) | [FileRepairTool-iOS-Simulator.zip](https://github.com/socrtwo/Universal-File-Repair-Tool/releases/latest) | For simulator testing only (unsigned) |
 | 🌐 **Web** | Open `file_repair_tool_v5.html` in any browser | No installation required |
 
-> Windows builds are signed with [Sigstore](https://www.sigstore.dev/) for supply-chain integrity (`.bundle` verification files included in releases). Other platform builds are unsigned. See platform-specific notes above for bypassing security prompts.
+> Windows `.exe` builds are **Authenticode-signed via [Azure Trusted Signing](https://learn.microsoft.com/azure/trusted-signing/)** (the signature Windows itself recognizes, so SmartScreen/UAC trust it) **in addition to** a [Sigstore](https://www.sigstore.dev/) provenance bundle for supply-chain integrity (`.bundle` files included in releases). Other platform builds are unsigned. See platform-specific notes above for bypassing security prompts. Signing setup is documented in [SIGNING.md](SIGNING.md).
 >
-> To verify a Windows release:
+> To verify the Authenticode signature (Windows):
+> ```powershell
+> Get-AuthenticodeSignature .\<file>.exe | Format-List
+> ```
+> To verify the Sigstore provenance bundle:
 > ```bash
 > cosign verify-blob --bundle <file>.exe.bundle \
 >   --certificate-identity-regexp "https://github.com/socrtwo/Universal-File-Repair-Tool/" \
