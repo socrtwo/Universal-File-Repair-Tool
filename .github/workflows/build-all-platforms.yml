@@ -1,6 +1,8 @@
 name: Build All Platforms
 
 on:
+  push:
+    tags: ["v*"]
   workflow_dispatch:
 
 permissions:
@@ -249,7 +251,12 @@ jobs:
 
     - name: Generate tag
       id: tag
-      run: echo "tag=v5.0.0-build-$(date +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+      run: |
+        if [[ "${GITHUB_REF}" == refs/tags/* ]]; then
+          echo "tag=${GITHUB_REF#refs/tags/}" >> "$GITHUB_OUTPUT"
+        else
+          echo "tag=v5.0.0-build-$(date +%Y%m%d%H%M%S)" >> "$GITHUB_OUTPUT"
+        fi
 
     - name: Create Release
       uses: softprops/action-gh-release@v1
