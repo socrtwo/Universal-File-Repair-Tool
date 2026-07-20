@@ -172,9 +172,12 @@ jobs:
 
     - name: Build macOS App
       working-directory: ./macos
+      # No GH_TOKEN here: with a token present electron-builder auto-publishes
+      # into the stale untagged v5.0.0 draft and dies on an asset-name
+      # collision (422 already_exists). The workflow's own Create Release
+      # step attaches the collected artifacts instead.
       run: npm run build
       env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         CSC_IDENTITY_AUTO_DISCOVERY: false
 
     - name: Collect artifacts
