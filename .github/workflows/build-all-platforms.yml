@@ -176,7 +176,10 @@ jobs:
       # into the stale untagged v5.0.0 draft and dies on an asset-name
       # collision (422 already_exists). The workflow's own Create Release
       # step attaches the collected artifacts instead.
-      run: npm run build
+      # --publish never: electron-builder's CI default tried to publish and
+      # died without a token even though this workflow's own release step
+      # does the publishing.
+      run: npm run build -- --publish never
       env:
         CSC_IDENTITY_AUTO_DISCOVERY: false
 
